@@ -306,7 +306,7 @@ select.btn{padding-right:6px}
       <li><b>사향속</b> 점표적은 집중, 지역표적은 평행, 포목선에 가로놓인 선표적은 개방, 비스듬한 선표적은 특수에 자세를 넣는다.</li>
       <li><b>신관</b> 순발은 노출 표적에 살상범위 40m. 근접은 공중에서 터져 노출 표적 55m, 무개 참호 40m지만 전체 80발뿐이고 탄착 관측이 흐려진다. 지연은 유개 엄폐호를 뚫는다. 순발과 근접은 엄폐호에 듣지 않는다.</li>
       <li><b>사격방법</b> 효력사는 조정 사격이 끝난 뒤에만 쏜다. 조정 중 명중하거나 3발을 다 쏘면 관측소가 효력사의 방법과 발수를 부른다. 효력사의 사격포, 방법, 발수는 관측소, 화력지휘소, 포진 순으로 통제된다. 관측소가 부르는 발수는 소대 발수다. 화력지휘소는 사격포 수로 나눠 포당 발수를 내리고, 총 발수가 소대 발수와 맞아야 포진이 쏜다. 익차사는 1번포부터 4번포까지 차례로, 연속사는 포마다 쉬지 않고 쏜다. 사격포에서 2번포만 남기면 지명사다. 도중에 표적이 파괴되면 관측소가 사격을 중지시켜 남은 탄은 쏘지 않는다. 포마다 60발, 근접신관은 전체 80발이고 보급은 없다. 한 번에 쏠 수 있는 최대 발수는 소대 52발(포당 13발)이다. 조정 사격은 발수에 넣지 않는다.</li>
-      <li><b>사격</b> 조정 사격은 기준포로 한 발씩, 최대 3발이다. 한 발이라도 표적 40m 안에 떨어지면 명중이고 곧바로 효력사로 넘어간다. 3발이 모두 빗나가면 마지막 수정을 반영해 효력사만 쏜다. 효력사는 표적이 파괴되면 끝나고, 아니면 수정해서 세 번까지 반복하거나 사격 끝을 보고한다. 관측소는 사격요청 때 OTAZ(관측소에서 표적을 보는 방위각)를 부르고, 수정은 그 관측선 기준으로 온다. 더하기는 관측소에서 멀어지는 쪽이다. 도판에 OTAZ를 넣고 관측 수정으로 핀을 옮기고 제원을 다시 뽑는다.</li>
+      <li><b>사격</b> 조정 사격은 기준포로 한 발씩, 최대 3발이다. 한 발이라도 표적 40m 안에 떨어지면 명중이고 곧바로 효력사로 넘어간다. 3발이 모두 빗나가면 마지막 수정을 반영해 효력사만 쏜다. 효력사에 들어가면 관측소는 더 이상 수정을 부르지 않고 효과만 알린다. 표적이 파괴되면 끝나고, 아니면 같은 통제로 세 번까지 반복하거나 사격 끝을 보고한다. 관측소는 사격요청 때 OTAZ(관측소에서 표적을 보는 방위각)를 부르고, 수정은 그 관측선 기준으로 온다. 더하기는 관측소에서 멀어지는 쪽이다. 도판에 OTAZ를 넣고 관측 수정으로 핀을 옮기고 제원을 다시 뽑는다.</li>
     </ol>
     <small>지형은 생성한 가상 지형이고 좌표는 MGRS 형식만 따른다. 사표는 게임용 탄도 모형이며 장약은 6호까지, 최대사거리 6,250m, 살상범위 40m로 맞췄다.</small>
     <button class="btn go" type="button" id="manClose">닫기</button>
@@ -608,9 +608,9 @@ function resolve(){const T=S.target,hits=S.shots.filter(s=>!s.cancel).map(s=>s.t
   if(T.grade==='무효'&&T.onT>=Math.ceil(sel.length*.75))T.grade='제압';if(T.stray>=2)T.grade='무효';
   const per=S.flight.meth==='right'||S.flight.meth==='left'?' '+gm.slice().sort((a,b)=>a.i-b.i).map(q=>{const dx=q.x-T.c.x,dy=q.y-T.c.y,l=Math.round((dx*u[0]+dy*u[1])/10)*10,rg=Math.round((dx*g[0]+dy*g[1])/10)*10;return `${q.i+1}번포 ${[l?(l>0?'우 ':'좌 ')+Math.abs(l):'',rg?(rg>0?'원 ':'근 ')+Math.abs(rg):''].filter(Boolean).join(' ')||'양호'}`}).join(', ')+'.':'';
   draw();const left=S.guns.reduce((a,q)=>a+q.ammo,0);
-  if(T.grade==='파괴'||T.ffe>=3||left<1){S.reveal=true;draw();say('관측소',(stray?`이탈 ${stray}문. `:'')+(T.grade==='파괴'?'표적 파괴. 사격 끝. 이상.':`효과 ${T.grade}. 사격 끝. 이상.`)+per);return endMission()}
+  if(T.grade==='파괴'||T.ffe>=3||left<1){S.reveal=true;draw();say('관측소',(stray?`이탈 ${stray}문. `:'')+(T.grade==='파괴'?'표적 파괴. 사격 끝. 이상.':`효과 ${T.grade}. 사격 끝. 이상.`));return endMission()}
   S.phase='plan';$('#endBtn').hidden=false;paintGuns();updateHud();
-  say('관측소',(stray?`이탈 ${stray}문. `:'')+`효과 ${T.grade}. ${corr}.${per} 반복하거나 사격 끝을 보고하라. 이상.`)}
+  say('관측소',(stray?`이탈 ${stray}문. `:'')+`효과 ${T.grade}. 효력사를 반복하거나 사격 끝을 보고하라. 이상.`)}
 $('#endBtn').onclick=()=>{const T=S.target;if(S.phase!=='plan'||!T||!T.ffe)return;snd('click');S.reveal=true;say('화력지휘소','사격 끝.',true);endMission()};
 function campOver(){return S.guns[1].ammo<3||S.guns.reduce((a,q)=>a+q.ammo,0)<12}
 function endMission(){S.phase='result';S.tEnd=performance.now();$('#endBtn').hidden=true;const T=S.target,sec=Math.round((S.tEnd-S.t0)/1000);
