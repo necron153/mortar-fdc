@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#111315">
+<title>박격포 사격지휘소</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans+KR:wght@400;500;700&display=swap">
+<style>
+/* Layout: one-screen bunker console. Stamped header plate, four station keys, one working station, radio ticker at the foot. */
+:root{
+  --bg:#111315; --panel:#22272a; --panel-hi:#2d3438; --edge:#40484d; --well:#0b0d0e;
+  --olive:#474f3b; --brass:#b4924c; --amber:#f0a73a; --paper:#d8cdb0; --ink:#2a2822;
+  --red:#b3362c; --green:#7ccf68; --fg:#d9d4c5; --mute:#918e82;
+  --f-display:"Black Han Sans","IBM Plex Sans KR",sans-serif;
+  --f-body:"IBM Plex Sans KR",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:14px;line-height:1.45;
+  background-image:radial-gradient(120% 60% at 50% 0%,#1b1f22 0%,var(--bg) 70%);overscroll-behavior:none}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+#app{position:relative;height:100%;max-width:520px;margin:0 auto;padding-inline:16px;padding-block:8px;display:flex;flex-direction:column;gap:8px}
+
+/* header plate */
+.plate{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:8px 12px;background:linear-gradient(#333a3e,#262b2e);
+  border:1px solid var(--edge);border-radius:3px;box-shadow:inset 0 1px 0 #ffffff14,0 2px 0 #000}
+.plate h1{font-family:var(--f-display);font-weight:400;font-size:19px;letter-spacing:.04em;margin:0;color:var(--paper);white-space:nowrap}
+.plate .stats{order:3;flex:1 0 100%;display:grid;grid-template-columns:repeat(4,1fr);gap:6px;border-top:1px solid var(--edge);padding-top:6px;font-family:var(--f-mono);font-size:12px;color:var(--amber);font-variant-numeric:tabular-nums}
+.plate .stats div{display:flex;align-items:baseline;gap:6px;white-space:nowrap}
+.plate .stats b{font-family:var(--f-body);font-weight:500;font-size:9px;letter-spacing:.12em;color:var(--mute)}
+.ghost{margin-left:auto;white-space:nowrap;background:none;border:1px solid var(--edge);border-radius:3px;padding:4px 8px;font-size:12px;color:var(--paper)}
+
+/* station keys */
+.keys{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.key{position:relative;padding:9px 4px 7px;background:linear-gradient(#3a4145,#272c2f);border:1px solid var(--edge);border-bottom-width:4px;
+  border-radius:3px;font-family:var(--f-display);font-size:15px;letter-spacing:.08em;color:var(--mute)}
+.key[aria-selected="true"]{border-bottom-width:1px;margin-top:3px;background:linear-gradient(#262b2e,#30373b);color:var(--amber)}
+.key i{position:absolute;top:5px;right:6px;width:7px;height:7px;border-radius:50%;background:#3a2f1c;box-shadow:inset 0 0 2px #000}
+.key.alert i{background:var(--amber);box-shadow:0 0 8px var(--amber);animation:blink 1s steps(2) infinite}
+@keyframes blink{50%{opacity:.25}}
+
+.station{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding-bottom:4px}
+.panel{background:linear-gradient(var(--panel-hi),var(--panel));border:1px solid var(--edge);border-radius:3px;padding:10px 12px;
+  box-shadow:inset 0 1px 0 #ffffff10}
+.panel.olive{background:linear-gradient(#525b45,var(--olive))}
+.label{font-size:10px;font-weight:700;letter-spacing:.14em;color:var(--mute);text-transform:uppercase}
+.olive .label{color:#c9c7a8}
+
+/* radio */
+#log{flex:1;min-height:180px;background:var(--paper);color:var(--ink);border-radius:2px;padding:12px 14px;overflow-y:auto;
+  font-family:var(--f-mono);font-size:13px;line-height:1.6;box-shadow:inset 0 0 30px #7a6a4055;
+  background-image:repeating-linear-gradient(#0000 0 25px,#2a282214 25px 26px)}
+#log p{margin:0 0 10px;min-width:0;overflow-wrap:anywhere}
+#log .who{display:block;font-size:10px;font-weight:600;letter-spacing:.12em;color:#7a3a2a}
+#log .me .who{color:#3d5a3a}
+
+/* board */
+.mapwrap{position:relative;border:1px solid var(--edge);border-radius:3px;background:var(--well);padding:5px;box-shadow:inset 0 0 12px #000}
+.mapwrap.shake{animation:shake .28s linear}
+@keyframes shake{20%{transform:translate(3px,-2px)}40%{transform:translate(-3px,2px)}60%{transform:translate(2px,2px)}80%{transform:translate(-1px,-1px)}}
+#map{display:block;width:100%;aspect-ratio:1;max-width:100%;touch-action:none;border-radius:1px;background:var(--paper)}
+.mapbtns{position:absolute;right:10px;top:10px;display:flex;flex-direction:column;gap:5px}
+.mapbtns button{width:34px;height:34px;background:#22272ae6;border:1px solid var(--edge);border-radius:3px;font-family:var(--f-mono);font-size:16px;color:var(--paper)}
+#eta{position:absolute;left:10px;top:10px;background:#0b0d0ee6;border:1px solid var(--brass);padding:4px 10px;font-family:var(--f-mono);color:var(--amber);font-size:13px;border-radius:2px}
+.reads{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
+.read{background:var(--well);border:1px solid #000;border-radius:2px;padding:5px 9px;box-shadow:inset 0 0 8px #000;min-width:0}
+.read span{display:block;font-size:9px;font-weight:700;letter-spacing:.12em;color:var(--mute)}
+.read output{display:block;font-family:var(--f-mono);font-size:16px;font-weight:600;color:var(--amber);text-shadow:0 0 8px #f0a73a66;font-variant-numeric:tabular-nums;white-space:nowrap}
+.read.wide{grid-column:1/-1}
+.row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.row>.label{flex:0 0 52px}
+#cmdPanel .row{flex-wrap:nowrap}
+#cmdPanel .row .btn{padding-inline:7px;flex:none}
+#cmdPanel .row .num{flex:1;min-width:0;width:auto}
+#cmdPanel .seg .btn{flex:1;min-width:0}
+.pad{display:grid;grid-template-columns:repeat(3,40px);grid-template-rows:repeat(2,36px);gap:4px}
+.btn{background:linear-gradient(#3d4549,#2a3033);border:1px solid var(--edge);border-bottom-width:3px;border-radius:3px;padding:6px 10px;
+  font-family:var(--f-mono);font-size:13px;color:var(--paper);min-height:36px}
+.btn:active{border-bottom-width:1px;transform:translateY(2px)}
+.btn:disabled{opacity:.4;cursor:default}
+.btn.on{color:var(--amber);border-color:var(--brass);background:linear-gradient(#262b2e,#30373b)}
+.btn.go{font-family:var(--f-display);font-size:15px;letter-spacing:.08em;color:var(--ink);background:linear-gradient(#cfae63,var(--brass));border-color:#6b5524}
+.num{width:84px;background:var(--well);border:1px solid #000;border-radius:2px;padding:7px 8px;text-align:center;
+  font-family:var(--f-mono);font-size:17px;font-weight:600;color:var(--amber);font-variant-numeric:tabular-nums}
+.num.sm{width:64px;font-size:15px}
+select.btn{padding-right:6px}
+.seg{display:flex;gap:4px;flex:1;min-width:0}
+.seg .btn{flex:1;padding-inline:4px;font-family:var(--f-body);font-weight:700}
+.hint{font-size:12px;color:var(--mute);margin:0}
+.olive .hint{color:#d6d4b8}
+
+/* firing table booklet */
+#tblwrap{flex:1;min-height:200px;overflow-y:auto;background:var(--paper);color:var(--ink);border-radius:2px;box-shadow:inset 0 0 30px #7a6a4055}
+#tbl{width:100%;border-collapse:collapse;font-family:var(--f-mono);font-size:14px;font-variant-numeric:tabular-nums}
+#tbl th{position:sticky;top:0;background:#c4b892;font-family:var(--f-body);font-size:11px;letter-spacing:.08em;padding:7px 8px;text-align:right;border-bottom:2px solid var(--ink)}
+#tbl td{padding:4px 8px;text-align:right;border-bottom:1px solid #2a282222}
+#tbl tr:nth-child(4n) td{border-bottom:1px solid #2a282277}
+#tbl td:nth-child(2){font-weight:600}
+
+/* guns */
+.guns{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
+.gun{background:var(--well);border:1px solid #000;border-radius:2px;padding:6px;display:flex;flex-direction:column;gap:4px;align-items:center;min-width:0}
+.gun header{display:flex;width:100%;justify-content:space-between;align-items:center;font-family:var(--f-display);font-size:14px;color:var(--paper)}
+.lamp{width:10px;height:10px;border-radius:50%;background:#3a1a16;box-shadow:inset 0 0 2px #000}
+.lamp.ok{background:var(--green);box-shadow:0 0 8px var(--green)}
+.gun svg{width:100%;max-width:130px;height:auto}
+.gun .cur{font-family:var(--f-mono);font-size:14px;font-weight:600;color:var(--amber);font-variant-numeric:tabular-nums}
+.gun .adj{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;width:100%}
+.gun .adj .btn{padding:4px 0;font-size:12px;min-height:32px}
+
+/* lever */
+#lever{position:relative;height:56px;background:var(--well);border:1px solid #000;border-radius:28px;box-shadow:inset 0 0 14px #000;overflow:hidden;touch-action:none}
+#lever span{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--f-display);letter-spacing:.2em;color:#6d2a24;font-size:15px;padding-left:50px;pointer-events:none}
+#knob{position:absolute;left:3px;top:3px;width:70px;height:48px;border-radius:24px;border:1px solid #4d130e;
+  background:linear-gradient(#d04a3d,var(--red) 55%,#7c2019);box-shadow:0 2px 6px #000,inset 0 1px 0 #ffffff55;
+  font-family:var(--f-display);font-size:15px;color:#fbe9d8;letter-spacing:.1em;touch-action:none}
+#knob.off{filter:grayscale(1) brightness(.6)}
+#fireMsg{min-height:20px;margin:0 0 6px;font-size:13px;font-weight:700;color:var(--amber)}
+
+.ticker{background:var(--well);border:1px solid #000;border-radius:2px;padding:6px 10px;font-family:var(--f-mono);font-size:12px;color:var(--amber);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* overlays */
+.over{position:absolute;inset:0;background:#07090acc;display:grid;place-items:center;padding:16px;z-index:5}
+.card{width:100%;max-width:380px;max-height:100%;overflow-y:auto;background:var(--paper);color:var(--ink);border-radius:2px;padding:18px 18px 16px;box-shadow:0 12px 40px #000}
+.card h2{font-family:var(--f-display);font-weight:400;font-size:30px;margin:0;letter-spacing:.06em;text-wrap:balance}
+.card .stamp{display:flex;align-items:center;gap:12px;color:#9b2a20;border-bottom:2px solid var(--ink);padding-bottom:10px;margin-bottom:10px}
+.card .stamp svg{width:56px;height:56px;flex:none}
+.card dl{display:grid;grid-template-columns:1fr auto;gap:3px 12px;margin:0 0 12px;font-family:var(--f-mono);font-size:13px;font-variant-numeric:tabular-nums}
+.card dd{margin:0;text-align:right;font-weight:600}
+.card ol{margin:0 0 12px;padding-left:20px;font-size:13.5px}
+.card li{margin-bottom:5px}
+.card .btn.go{width:100%}
+.card small{display:block;font-size:11.5px;color:#5c5648;margin-bottom:12px}
+@media (prefers-reduced-motion:reduce){.key.alert i,.mapwrap.shake{animation:none}}
+</style>
+
+<style>html{padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0);box-sizing:border-box}body{margin:0}</style>
+</head>
+<body>
+<div id="app">
+  <div class="plate">
+    <h1>박격포 사격지휘소</h1>
+    <div class="stats">
+      <div><b>임무</b><span id="sMis">1</span></div>
+      <div><b>잔탄</b><span id="sAmmo">7</span></div>
+      <div><b>시간</b><span id="sTime">0:00</span></div>
+      <div><b>점수</b><span id="sScore">0</span></div>
+    </div>
+    <button class="ghost" id="btnManual" type="button">교범</button>
+  </div>
+
+  <div class="keys" role="tablist" aria-label="근무 위치">
+    <button class="key" role="tab" data-st="radio" aria-selected="true" type="button">무전<i></i></button>
+    <button class="key" role="tab" data-st="board" aria-selected="false" type="button">도판<i></i></button>
+    <button class="key" role="tab" data-st="table" aria-selected="false" type="button">사표<i></i></button>
+    <button class="key" role="tab" data-st="guns" aria-selected="false" type="button">포반<i></i></button>
+  </div>
+
+  <section class="station" id="st-radio">
+    <div id="log" aria-live="polite"></div>
+    <div class="panel"><p class="hint" id="radioHint">수신한 명령에 따라 포반에서 방열부터 시작하라.</p></div>
+  </section>
+
+  <section class="station" id="st-board" hidden>
+    <div class="mapwrap" id="mapwrap">
+      <canvas id="map" aria-label="사격도판. 눌러서 표적을 표정한다."></canvas>
+      <div id="eta" hidden></div>
+      <div class="mapbtns">
+        <button type="button" id="zIn" aria-label="확대">+</button>
+        <button type="button" id="zOut" aria-label="축소">−</button>
+        <button type="button" id="zGun" aria-label="진지로 이동">⌂</button>
+        <button type="button" id="zPin" aria-label="핀으로 이동">◎</button>
+      </div>
+    </div>
+    <div class="reads">
+      <div class="read wide"><span>핀 좌표</span><output id="rGrid">도판을 눌러 표정</output></div>
+      <div class="read"><span>방위각 (기준포→핀)</span><output id="rAz">----</output></div>
+      <div class="read"><span>도상사거리</span><output id="rRng">----</output></div>
+      <div class="read"><span>핀 표고</span><output id="rAlt">---</output></div>
+      <div class="read"><span>진지 표고</span><output id="rGunAlt">---</output></div>
+    </div>
+    <div class="panel">
+      <div class="row">
+        <span class="label">핀 이동</span>
+        <div class="pad">
+          <span></span><button class="btn" type="button" data-n="0,1" aria-label="북으로">▲</button><span></span>
+          <button class="btn" type="button" data-n="-1,0" aria-label="서로">◀</button>
+          <button class="btn" type="button" data-n="0,-1" aria-label="남으로">▼</button>
+          <button class="btn" type="button" data-n="1,0" aria-label="동으로">▶</button>
+        </div>
+        <div class="seg" style="flex:0 0 auto">
+          <button class="btn on" type="button" data-step="10">10m</button>
+          <button class="btn" type="button" data-step="100">100m</button>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="row">
+        <span class="label">관측 수정</span>
+        <select class="btn" id="cLR" aria-label="좌우"><option value="-1">좌로</option><option value="1">우로</option></select>
+        <input class="num sm" id="cLRv" inputmode="numeric" value="0" aria-label="좌우 미터">
+        <select class="btn" id="cAD" aria-label="가감"><option value="1">더하기</option><option value="-1">줄이기</option></select>
+        <input class="num sm" id="cADv" inputmode="numeric" value="0" aria-label="가감 미터">
+        <button class="btn go" type="button" id="cApply">핀 이동</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="station" id="st-table" hidden>
+    <div class="panel">
+      <div class="row"><span class="label">장약</span><div class="seg" id="tblCh"></div></div>
+      <p class="hint" id="tblBand" style="margin-top:6px"></p>
+    </div>
+    <div id="tblwrap"><table id="tbl"><thead><tr><th>사거리 m</th><th>사각 밀</th><th>비행시간 초</th></tr></thead><tbody></tbody></table></div>
+  </section>
+
+  <section class="station" id="st-guns" hidden>
+    <div class="panel olive" id="layPanel">
+      <div class="row" style="justify-content:space-between;margin-bottom:8px">
+        <span class="label" style="flex:1">방열 · 지시 방위각 <b id="layM" style="font-family:var(--f-mono);font-size:14px;color:#fff3c9"></b></span>
+        <button class="btn go" type="button" id="layDone">방열 완료</button>
+      </div>
+      <div class="guns" id="guns"></div>
+      <p class="hint" id="layHint" style="margin-top:8px">네 문의 바늘을 가운데에 맞춰라. 남은 오차는 탄착에서 드러난다.</p>
+    </div>
+    <div class="panel" id="cmdPanel">
+      <div class="label" style="margin-bottom:8px">사격명령</div>
+      <div class="row" style="margin-bottom:7px"><span class="label">장약</span>
+        <button class="btn" type="button" data-inc="charge,-1">−</button><input class="num sm" id="iCharge" inputmode="numeric" value="1" aria-label="장약">
+        <button class="btn" type="button" data-inc="charge,1">+</button></div>
+      <div class="row" style="margin-bottom:7px"><span class="label">사각 밀</span>
+        <button class="btn" type="button" data-inc="elev,-10">−10</button><button class="btn" type="button" data-inc="elev,-1">−1</button>
+        <input class="num" id="iElev" inputmode="numeric" value="1100" aria-label="사각">
+        <button class="btn" type="button" data-inc="elev,1">+1</button><button class="btn" type="button" data-inc="elev,10">+10</button></div>
+      <div class="row" style="margin-bottom:7px"><span class="label">방위각 밀</span>
+        <button class="btn" type="button" data-inc="az,-10">−10</button><button class="btn" type="button" data-inc="az,-1">−1</button>
+        <input class="num" id="iAz" inputmode="numeric" value="0" aria-label="방위각">
+        <button class="btn" type="button" data-inc="az,1">+1</button><button class="btn" type="button" data-inc="az,10">+10</button></div>
+      <div class="row" style="margin-bottom:7px"><span class="label">사향속</span><div class="seg" id="segSheaf">
+        <button class="btn on" type="button" data-v="par">평행</button><button class="btn" type="button" data-v="conv">집중</button>
+        <button class="btn" type="button" data-v="open">개방</button><button class="btn" type="button" data-v="spec">특수</button></div></div>
+      <div class="row" style="margin-bottom:7px"><span class="label">신관</span><div class="seg" id="segFuze">
+        <button class="btn on" type="button" data-v="pd">순발</button><button class="btn" type="button" data-v="vt">근접 <span id="vtLeft">4</span></button>
+        <button class="btn" type="button" data-v="dly">지연</button></div></div>
+      <div class="row" id="attRow" style="margin-bottom:7px" hidden><span class="label">자세 밀</span><input class="num" id="iAtt" inputmode="numeric" value="0" aria-label="표적 자세"></div>
+      <div class="row" style="margin-bottom:7px"><span class="label">사격</span><div class="seg" id="segMode">
+        <button class="btn on" type="button" data-v="adj">조정 1발 <span id="adjN">0/3</span></button><button class="btn" type="button" data-v="ffe">효력사 4발</button></div></div>
+      <p class="hint" id="cmdInfo" style="margin-bottom:8px"></p>
+      <p id="fireMsg" role="status"></p>
+      <div id="lever"><span>오른쪽 끝까지 밀어 격발 ▶</span><button id="knob" type="button" aria-label="격발">격발</button></div>
+    </div>
+  </section>
+
+  <div class="ticker" id="ticker">무전 대기</div>
+
+  <div class="over" id="ovResult" hidden><div class="card" id="resCard"></div></div>
+  <div class="over" id="ovManual" hidden><div class="card">
+    <div class="stamp" style="color:var(--ink)"><h2>사격지휘 교범</h2></div>
+    <ol>
+      <li><b>방열</b> 포반에서 네 문을 지시 방위각에 맞춘다. 남긴 오차만큼 그 포의 탄이 옆으로 샌다.</li>
+      <li><b>표정</b> 관측소가 부른 좌표를 도판에 찍는다. 앞 숫자는 동쪽으로, 뒤 숫자는 북쪽으로 읽는다. 6자리 좌표는 100m 칸의 남서쪽 모서리다.</li>
+      <li><b>판독</b> 도판이 기준포(2번포)에서 핀까지의 방위각, 도상사거리, 핀 표고를 보여준다.</li>
+      <li><b>보조사거리</b> 도상사거리 + (핀 표고 − 진지 표고) ÷ 2. 표적이 높으면 늘고 낮으면 준다.</li>
+      <li><b>사표</b> 보조사거리가 들어가는 장약을 고르고 사각을 읽는다. 사거리 끝단보다 중간대가 정확하다.</li>
+      <li><b>사향속</b> 점표적은 집중, 지역표적은 평행, 포목선에 가로놓인 선표적은 개방, 비스듬한 선표적은 특수에 자세를 넣는다.</li>
+      <li><b>신관</b> 순발은 노출 표적에 살상범위 40m. 근접은 공중에서 터져 노출 표적 55m, 무개 참호 40m지만 임무당 4발뿐이고 탄착 관측이 흐려진다. 지연은 유개 엄폐호를 뚫는다. 순발과 근접은 엄폐호에 듣지 않는다.</li>
+      <li><b>사격</b> 조정 사격은 기준포로 한 발씩, 최대 3발이다. 한 발이라도 표적 40m 안에 떨어지면 명중이고 곧바로 효력사로 넘어간다. 3발이 모두 빗나가면 마지막 수정을 반영해 효력사만 쏜다. 효력사는 4문 한 번이고 그것으로 임무가 끝난다. 관측소 수정은 포목선 기준으로 온다. 도판의 관측 수정으로 핀을 옮기고 제원을 다시 뽑는다.</li>
+    </ol>
+    <small>지형은 생성한 가상 지형이고 좌표는 MGRS 형식만 따른다. 사표는 게임용 탄도 모형이며 장약은 6호까지, 최대사거리 6,250m, 살상범위 40m로 맞췄다.</small>
+    <button class="btn go" type="button" id="manClose">닫기</button>
+  </div></div>
+</div>
+
+<script>
+(()=>{
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const MIL=Math.PI/3200, G=9.81, RMAX=[1300,2300,3300,4300,5300,6250],NC=RMAX.length,KR=40, E_MIN=800, E_MAX=1500;
+const MAP={e0:40000,n0:10000,size:8000}, NG=161, CELL=50, ZONE='52S CH';
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)), rnd=(a,b)=>a+Math.random()*(b-a);
+const gauss=()=>{let u=0,v=0;while(!u)u=Math.random();v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(6.2831853*v)};
+const norm=m=>((Math.round(m)%6400)+6400)%6400, pad=(n,w)=>String(n).padStart(w,'0');
+const vec=m=>[Math.sin(m*MIL),Math.cos(m*MIL)];
+const azOf=(a,b)=>norm(Math.atan2(b.x-a.x,b.y-a.y)/MIL), dist=(a,b)=>Math.hypot(b.x-a.x,b.y-a.y);
+const tblRange=(c,mil)=>RMAX[c-1]*Math.sin(2*mil*MIL);
+const tblElev=(c,R)=>{const r=R/RMAX[c-1];return (r>1||r<Math.sin(2*E_MAX*MIL))?null:(Math.PI-Math.asin(r))/2/MIL};
+const tof=(c,mil)=>2*Math.sqrt(RMAX[c-1]*G)*Math.sin(mil*MIL)/G;
+const grid=(p,d)=>{const k=d===8?10:100,w=d/2;return `${ZONE} ${pad(Math.floor(p.x/k)%10**w,w)} ${pad(Math.floor(p.y/k)%10**w,w)}`};
+
+/* ---------- terrain (generated; swap alt() for a real elevation source later) ---------- */
+const Hh=new Float32Array(NG*NG); let aMin=1e9,aMax=-1e9;
+(function(){const seed=20261007;
+  const h2=(x,y)=>{let n=(x*374761393+y*668265263+seed*1442695041)|0;n=(n^(n>>>13))*1274126177|0;return((n^(n>>>16))>>>0)/4294967296};
+  const vn=(x,y)=>{const xi=Math.floor(x),yi=Math.floor(y),fx=x-xi,fy=y-yi,sx=fx*fx*(3-2*fx),sy=fy*fy*(3-2*fy);
+    const a=h2(xi,yi),b=h2(xi+1,yi),c=h2(xi,yi+1),d=h2(xi+1,yi+1);return a+(b-a)*sx+(c-a)*sy+(a-b-c+d)*sx*sy};
+  for(let j=0;j<NG;j++)for(let i=0;i<NG;i++){let x=i*CELL/2700,y=j*CELL/2700,amp=1,s=0,t=0;
+    for(let o=0;o<5;o++){let v=vn(x+o*17.3,y+o*9.1);if(o<2)v=1-Math.abs(2*v-1);s+=v*amp;t+=amp;amp*=.5;x*=2.03;y*=2.03}
+    const a=110+820*Math.pow(s/t,1.45);Hh[j*NG+i]=a;aMin=Math.min(aMin,a);aMax=Math.max(aMax,a)}})();
+function alt(x,y){const gx=clamp((x-MAP.e0)/CELL,0,NG-1.001),gy=clamp((y-MAP.n0)/CELL,0,NG-1.001),i=gx|0,j=gy|0,fx=gx-i,fy=gy-j,k=j*NG+i;
+  return Hh[k]*(1-fx)*(1-fy)+Hh[k+1]*fx*(1-fy)+Hh[k+NG]*(1-fx)*fy+Hh[k+NG+1]*fx*fy}
+
+const BASE=document.createElement('canvas'), BP=1000; BASE.width=BASE.height=BP;
+(function(){const c=BASE.getContext('2d'),im=c.createImageData(BP,BP),d=im.data,m=MAP.size/BP;
+  const ramp=[[196,204,162],[219,208,170],[203,170,124],[176,138,100]];
+  for(let py=0;py<BP;py++)for(let px=0;px<BP;px++){const x=MAP.e0+(px+.5)*m,y=MAP.n0+MAP.size-(py+.5)*m,a=alt(x,y);
+    const sh=clamp(1+((alt(x-40,y)-alt(x+40,y))+(alt(x,y+40)-alt(x,y-40)))/260,.72,1.16);
+    const t=clamp((a-aMin)/(aMax-aMin),0,.999)*3,k=t|0,f=t-k,o=(py*BP+px)*4;
+    for(let q=0;q<3;q++)d[o+q]=(ramp[k][q]+(ramp[k+1][q]-ramp[k][q])*f)*sh;d[o+3]=255}
+  c.putImageData(im,0,0);
+  const sc=BP/MAP.size,P=(gx,gy)=>[gx*CELL*sc,BP-gy*CELL*sc];
+  for(const idx of[0,1]){c.beginPath();
+    for(let j=0;j<NG-1;j++)for(let i=0;i<NG-1;i++){const k=j*NG+i,v=[Hh[k],Hh[k+1],Hh[k+NG+1],Hh[k+NG]],lo=Math.min(...v),hi=Math.max(...v);
+      for(let L=Math.ceil(lo/40)*40;L<hi;L+=40){if((L%200===0)!==!!idx)continue;const pts=[];
+        const e=(a,b,x1,y1,x2,y2)=>{if((a<L)!==(b<L)){const t=(L-a)/(b-a);pts.push(P(x1+(x2-x1)*t,y1+(y2-y1)*t))}};
+        e(v[0],v[1],i,j,i+1,j);e(v[1],v[2],i+1,j,i+1,j+1);e(v[2],v[3],i+1,j+1,i,j+1);e(v[3],v[0],i,j+1,i,j);
+        for(let q=0;q+1<pts.length;q+=2){c.moveTo(pts[q][0],pts[q][1]);c.lineTo(pts[q+1][0],pts[q+1][1])}}}
+    c.strokeStyle=idx?'rgba(96,62,34,.62)':'rgba(96,62,34,.3)';c.lineWidth=idx?1.3:.6;c.stroke()}})();
+
+/* ---------- state ---------- */
+const S={mission:0,total:0,phase:'lay',M:0,guns:[],layDone:false,target:null,pin:null,ammo:14,used:0,t0:0,tEnd:0,
+  marks:[],shots:[],bursts:[],reveal:false,step:10,sheaf:'par',mode:'adj',fuze:'pd',vt:4,station:'radio',history:[]};
+const base=()=>S.guns[1], gunAlt=()=>alt(base().x,base().y);
+
+/* ---------- sound ---------- */
+let AC=null;
+function snd(kind){try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();const t=AC.currentTime,g=AC.createGain();g.connect(AC.destination);
+  if(kind==='click'){const o=AC.createOscillator();o.type='square';o.frequency.value=900;g.gain.setValueAtTime(.04,t);g.gain.exponentialRampToValueAtTime(.001,t+.04);o.connect(g);o.start(t);o.stop(t+.05);return}
+  const len=kind==='boom'?1.1:.5,b=AC.createBuffer(1,AC.sampleRate*len,AC.sampleRate),d=b.getChannelData(0);
+  for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,kind==='boom'?2.2:4);
+  const s=AC.createBufferSource(),f=AC.createBiquadFilter();s.buffer=b;f.type='lowpass';f.frequency.value=kind==='boom'?260:900;
+  g.gain.value=kind==='boom'?.9:.5;s.connect(f);f.connect(g);s.start(t)}catch(e){}}
+const buzz=ms=>{try{navigator.vibrate&&navigator.vibrate(ms)}catch(e){}};
+
+/* ---------- radio ---------- */
+const reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+function say(who,text,me){const p=document.createElement('p');if(me)p.className='me';
+  const w=document.createElement('span');w.className='who';w.textContent=who;const b=document.createElement('span');p.append(w,b);$('#log').append(p);
+  $('#ticker').textContent=`${who} ▸ ${text}`;if(S.station!=='radio')$('[data-st="radio"]').classList.add('alert');
+  let i=0;const tick=()=>{i=reduce?text.length:Math.min(text.length,i+2);b.textContent=text.slice(0,i);$('#log').scrollTop=1e6;if(i<text.length)setTimeout(tick,22)};tick()}
+
+/* ---------- stations ---------- */
+function go(st){S.station=st;$$('.key').forEach(k=>{const on=k.dataset.st===st;k.setAttribute('aria-selected',on);if(on)k.classList.remove('alert')});
+  $$('.station').forEach(s=>s.hidden=s.id!=='st-'+st);if(st==='board'){resize();draw()}}
+$$('.key').forEach(k=>k.onclick=()=>{snd('click');go(k.dataset.st)});
+
+/* ---------- mission flow ---------- */
+function occupy(){S.phase='lay';S.layDone=false;
+  S.M=norm(Math.round(rnd(0,6400)/100)*100);const mv=vec(S.M),back=rnd(2200,3200),c={x:clamp(44000-mv[0]*back+rnd(-400,400),40700,47300),y:clamp(14000-mv[1]*back+rnd(-400,400),10700,17300)};
+  const u=vec(S.M+1600);S.guns=[0,1,2,3].map(i=>({x:c.x+u[0]*(1.5-i)*40,y:c.y+u[1]*(1.5-i)*40,err:Math.round(rnd(20,80))*(Math.random()<.5?-1:1)}));
+  S.marks=[];S.target=null;S.pin=null;S.reveal=false;view.cx=c.x+mv[0]*1800;view.cy=c.y+mv[1]*1800;view.z=1.6;
+  $('#iAz').value=pad(S.M,4);renderGuns();updateReads();updateHud();
+  say('중대장',`진지 점령 완료. 방열 방위각 ${pad(S.M,4)}. 네 문 방열 후 보고하라. 이상.`);
+  $('#radioHint').textContent='포반으로 가서 네 문을 방열하라.';$('[data-st="guns"]').classList.add('alert')}
+function newMission(){S.mission++;S.phase='plan';S.ammo=7;S.vt=4;$('#vtLeft').textContent=4;$('#fireMsg').textContent='';S.used=0;S.marks=[];S.pin=null;S.reveal=false;S.t0=performance.now();S.tEnd=0;
+  const types=S.mission===1?['point']:S.mission===2?['area']:S.mission===3?['line']:['point','area','line','oblique','oblique'];
+  const type=types[Math.random()*types.length|0];let c,gAz;
+  for(let k=0;k<300;k++){gAz=norm(S.M+rnd(-600,600));const d=S.mission===1?rnd(2000,3400):rnd(1500,6000),v=vec(gAz);
+    c={x:base().x+v[0]*d,y:base().y+v[1]*d};if(c.x>40500&&c.x<47500&&c.y>10500&&c.y<17500)break}
+  gAz=azOf(base(),c);let att=0,els=[],name,desc;const g=vec(gAz),u=vec(gAz+1600);
+  let prot='open';if(type==='point'){els=[{x:c.x,y:c.y}];const hard=S.mission>1&&Math.random()<.6;prot=hard?'hard':'open';name=hard?['적 기관총 유개호','적 관측소 벙커'][Math.random()*2|0]:'개활지에 정차한 적 보급 트럭';desc=hard?'점표적, 유개 엄폐':'점표적, 노출'}
+  else if(type==='area'){for(const l of[-75,-25,25,75])for(const dp of[-15,15])els.push({x:c.x+u[0]*l+g[0]*dp,y:c.y+u[1]*l+g[1]*dp});name='개활지에 집결한 적 보병';desc='지역표적, 노출, 정면 150'}
+  else{att=type==='line'?gAz+1600:gAz+1600+(Math.random()<.5?-1:1)*rnd(500,900);att=Math.round(norm(att)%3200/10)*10;const a=vec(att);
+    for(let s=-140;s<=140;s+=40)els.push({x:c.x+a[0]*s,y:c.y+a[1]*s});if(type==='line')prot='trench';name=type==='line'?'적 참호선':'도로상의 적 차량 종대';desc=`선표적, ${type==='line'?'무개 참호':'노출'}, 길이 280, 자세 ${pad(att,4)}`}
+  const rookie=S.mission>3&&Math.random()<.5,sg=rookie?45:12,rep={x:c.x+gauss()*sg,y:c.y+gauss()*sg},digits=rookie?6:8;
+  S.target={type,c,els,att,name,rookie,prot,adjUsed:0,ffe:0,grade:'무효'};
+  $('#iAtt').value=pad(att&&type!=='line'?0:0,4);
+  adjUi();setMode('adj');say(rookie?'관측소(신병)':'관측소',`화력지휘소, 여기는 관측소. 사격임무. 좌표 ${grid(rep,digits)}. ${name}. ${desc}. 이상.`);
+  $('#radioHint').textContent='도판에 좌표를 표정하고 제원을 뽑아라.';$('[data-st="board"]').classList.add('alert');updateHud();updateReads();paintGuns();draw()}
+
+/* ---------- lay ---------- */
+function renderGuns(){$('#layM').textContent=pad(S.M,4);const box=$('#guns');box.innerHTML='';
+  S.guns.forEach((g,i)=>{const d=document.createElement('div');d.className='gun';
+    d.innerHTML=`<header><span>${i+1}번포${i===1?' · 기준':''}</span><span class="lamp"></span></header>
+    <svg viewBox="0 0 120 70" aria-hidden="true"><path d="M12 62A48 48 0 0 1 108 62" fill="none" stroke="#40484d" stroke-width="2"/>
+    <path d="M60 14v8M26 28l5 6M94 28l-5 6" stroke="#b4924c" stroke-width="2" fill="none"/><line x1="60" y1="62" x2="60" y2="18" stroke="#f0a73a" stroke-width="2.5" stroke-linecap="round"/>
+    <circle cx="60" cy="62" r="5" fill="#b4924c"/></svg><div class="cur"></div>
+    <div class="adj">${[-10,-1,1,10].map(v=>`<button class="btn" type="button" data-g="${i}" data-d="${v}" aria-label="${i+1}번포 ${v>0?'+':''}${v}밀">${v>0?'+':'−'}${Math.abs(v)}</button>`).join('')}</div>`;
+    box.append(d)});paintGuns()}
+function paintGuns(){$$('.gun').forEach((d,i)=>{const g=S.guns[i];d.querySelector('line').setAttribute('transform',`rotate(${clamp(g.err,-100,100)*.62} 60 62)`);
+    d.querySelector('.cur').textContent=S.layDone?'고정':pad(norm(S.M+g.err),4);d.querySelector('.lamp').classList.toggle('ok',g.err===0);
+    d.querySelectorAll('button').forEach(b=>b.disabled=S.layDone)});
+  $('#guns').hidden=S.layDone;$('#layDone').disabled=S.layDone;$('#layDone').textContent=S.layDone?'방열 고정됨':'방열 완료';
+  $('#cmdPanel').style.opacity=S.layDone?1:.45;$('#knob').classList.toggle('off',!S.layDone||S.phase!=='plan')}
+$('#guns').onclick=e=>{const b=e.target.closest('button');if(!b||S.layDone)return;snd('click');S.guns[+b.dataset.g].err+=+b.dataset.d;paintGuns()};
+$('#layDone').onclick=()=>{if(S.layDone)return;S.layDone=true;snd('click');const off=S.guns.filter(g=>g.err).length;
+  $('#layHint').textContent=off?`${off}문에 오차가 남은 채로 고정했다.`:'네 문 모두 정렬됐다.';
+  say('화력지휘소','방열 완료. 사격 준비 끝.',true);setTimeout(newMission,reduce?0:1300);paintGuns()};
+
+/* ---------- command inputs ---------- */
+const val=id=>parseInt($(id).value,10)||0;
+function cmdInfo(){const c=clamp(val('#iCharge'),1,NC),e=val('#iElev');
+  $('#cmdInfo').textContent=(e<E_MIN||e>E_MAX)?`사각은 ${E_MIN}–${E_MAX}밀 안에서 쓴다.`:`이 제원의 사표 사거리 ${Math.round(tblRange(c,e)).toLocaleString()}m · 비행시간 ${Math.round(tof(c,e))}초`}
+$$('[data-inc]').forEach(b=>b.onclick=()=>{snd('click');const[k,d]=b.dataset.inc.split(',');
+  if(k==='charge')$('#iCharge').value=clamp(val('#iCharge')+ +d,1,NC);
+  if(k==='elev')$('#iElev').value=clamp(val('#iElev')+ +d,E_MIN,E_MAX);
+  if(k==='az')$('#iAz').value=pad(norm(val('#iAz')+ +d),4);cmdInfo()});
+['#iCharge','#iElev','#iAz'].forEach(s=>$(s).oninput=cmdInfo);
+function seg(id,key,after){$(id).onclick=e=>{const b=e.target.closest('button');if(!b)return;snd('click');S[key]=b.dataset.v;
+  $$(id+' button').forEach(x=>x.classList.toggle('on',x===b));after&&after()}}
+seg('#segSheaf','sheaf',()=>$('#attRow').hidden=S.sheaf!=='spec');seg('#segMode','mode',()=>{if(S.target&&S.target.adjLock)setMode('ffe')});seg('#segFuze','fuze');
+const FZ={pd:'순발',vt:'근접',dly:'지연'},KRT={pd:{open:KR,trench:15,hard:0},vt:{open:55,trench:KR,hard:0},dly:{open:15,trench:20,hard:25}};
+function warn(m){$('#fireMsg').textContent=m;if(m){snd('click');$('#ticker').textContent='포반장 ▸ '+m}}
+
+/* ---------- firing table ---------- */
+let tblC=1;
+function renderTable(){$('#tblCh').innerHTML=RMAX.map((_,i)=>`<button class="btn${i+1===tblC?' on':''}" type="button" data-c="${i+1}">${i+1}</button>`).join('');
+  const lo=Math.ceil(RMAX[tblC-1]*Math.sin(2*E_MAX*MIL)/50)*50,hi=RMAX[tblC-1];
+  $('#tblBand').textContent=`장약 ${tblC} · 사거리 ${lo.toLocaleString()}–${hi.toLocaleString()}m · 고각사격`;let h='';
+  for(let R=lo;R<=hi;R+=50){const e=tblElev(tblC,R);h+=`<tr><td>${R.toLocaleString()}</td><td>${Math.round(e)}</td><td>${tof(tblC,e).toFixed(1)}</td></tr>`}
+  $('#tbl tbody').innerHTML=h;$('#tblwrap').scrollTop=0}
+$('#tblCh').onclick=e=>{const b=e.target.closest('button');if(!b)return;snd('click');tblC=+b.dataset.c;renderTable()};
+
+/* ---------- map ---------- */
+const cv=$('#map'),cx=cv.getContext('2d'),view={cx:44000,cy:14000,z:1,w:300};
+const ppm=()=>view.w/MAP.size*view.z, sx=x=>view.w/2+(x-view.cx)*ppm(), sy=y=>view.w/2-(y-view.cy)*ppm();
+const wx=px=>view.cx+(px-view.w/2)/ppm(), wy=py=>view.cy-(py-view.w/2)/ppm();
+function resize(){const w=cv.clientWidth;if(!w)return;const dpr=Math.min(3,window.devicePixelRatio||1);view.w=w;cv.width=cv.height=Math.round(w*dpr);cx.setTransform(dpr,0,0,dpr,0,0)}
+function clampView(){view.z=clamp(view.z,1,9);const h=MAP.size/view.z/2;view.cx=clamp(view.cx,MAP.e0+h,MAP.e0+MAP.size-h);view.cy=clamp(view.cy,MAP.n0+h,MAP.n0+MAP.size-h)}
+function skull(c,x,y,s){c.save();c.translate(x,y);c.scale(s,s);c.fillStyle='#9b2a20';c.strokeStyle='#f3ead0';c.lineWidth=.14;
+  c.beginPath();c.arc(0,-.2,.82,0,7);c.rect(-.46,.3,.92,.62);c.stroke();c.fill();c.fillStyle='#f3ead0';
+  c.beginPath();c.arc(-.32,-.15,.22,0,7);c.arc(.32,-.15,.22,0,7);c.fill();c.beginPath();c.moveTo(0,.12);c.lineTo(-.11,.36);c.lineTo(.11,.36);c.fill();
+  c.fillRect(-.26,.56,.06,.36);c.fillRect(-.03,.56,.06,.36);c.fillRect(.2,.56,.06,.36);c.restore()}
+function mortarSym(c,X,Y,az,r){c.save();c.translate(X,Y);c.rotate(az*MIL);c.strokeStyle='#143c6e';c.fillStyle='#d8cdb0';c.lineWidth=Math.max(1.4,r*.28);c.lineCap='butt';
+  const L=r*5;c.beginPath();c.arc(0,0,r,0,7);c.fill();c.stroke();c.beginPath();c.moveTo(0,-r);c.lineTo(0,-r-L);
+  c.moveTo(-r*.75,-r-L+r*1.2);c.lineTo(0,-r-L);c.lineTo(r*.75,-r-L+r*1.2);
+  c.moveTo(-r*.55,-r-L*.3);c.lineTo(r*.55,-r-L*.3);c.moveTo(-r*.55,-r-L*.55);c.lineTo(r*.55,-r-L*.55);c.stroke();c.restore()}
+function draw(){if(S.station!=='board')return;clampView();const W=view.w,p=ppm(),c=cx;c.clearRect(0,0,W,W);
+  c.imageSmoothingQuality='high';c.drawImage(BASE,sx(MAP.e0),sy(MAP.n0+MAP.size),MAP.size*p,MAP.size*p);
+  if(p>.11){c.beginPath();for(let k=1;k<80;k++){if(k%10===0)continue;const X=sx(MAP.e0+k*100),Y=sy(MAP.n0+k*100);c.moveTo(X,0);c.lineTo(X,W);c.moveTo(0,Y);c.lineTo(W,Y)}
+    c.strokeStyle='rgba(42,40,34,.16)';c.lineWidth=.5;c.stroke()}
+  c.beginPath();for(let k=0;k<=8;k++){const X=sx(MAP.e0+k*1000),Y=sy(MAP.n0+k*1000);c.moveTo(X,0);c.lineTo(X,W);c.moveTo(0,Y);c.lineTo(W,Y)}
+  c.strokeStyle='rgba(42,40,34,.75)';c.lineWidth=1;c.stroke();
+  c.font='600 11px "IBM Plex Mono",monospace';c.textAlign='center';c.textBaseline='middle';
+  for(let k=0;k<=8;k++){const X=sx(MAP.e0+k*1000),Y=sy(MAP.n0+k*1000);
+    for(const[lx,ly,t]of[[X,9,40+k],[9,Y,10+k]]){if(lx<-10||ly<-10||lx>W+10||ly>W+10)continue;c.fillStyle='#d8cdb0';c.fillRect(lx-9,ly-7,18,14);c.fillStyle='#2a2822';c.fillText(t,lx,ly)}}
+  if(S.pin&&S.guns.length){c.setLineDash([5,4]);c.beginPath();c.moveTo(sx(base().x),sy(base().y));c.lineTo(sx(S.pin.x),sy(S.pin.y));c.strokeStyle='rgba(20,60,110,.8)';c.lineWidth=1.2;c.stroke();c.setLineDash([])}
+  if(S.guns.length){if(p>.22)S.guns.forEach((g,i)=>{const X=sx(g.x),Y=sy(g.y);mortarSym(c,X,Y,S.M,4.5);c.fillStyle=i===1?'#9b2a20':'#143c6e';c.fillText(i+1,X,Y+13)});
+    else mortarSym(c,(sx(S.guns[0].x)+sx(S.guns[3].x))/2,(sy(S.guns[0].y)+sy(S.guns[3].y))/2,S.M,5.5)}
+  for(const m of S.marks){const X=sx(m.x),Y=sy(m.y),r=Math.max(3,5*Math.sqrt(view.z)/1.6);c.beginPath();for(let q=0;q<8;q++){const a=q*.785,rr=q%2?r*.45:r;c.lineTo(X+Math.cos(a)*rr,Y+Math.sin(a)*rr)}
+    c.closePath();c.fillStyle='#1c1a16';c.fill();if(p>.15){c.fillStyle='#1c1a16';c.fillText(m.gun+1,X+r+6,Y-r)}}
+  if(S.target&&(S.reveal||S.target.els.some(e=>e.dead)))for(const e of S.target.els){const X=sx(e.x),Y=sy(e.y);
+    if(e.dead)skull(c,X,Y,clamp(7*Math.sqrt(view.z),8,16));else if(S.reveal){c.strokeStyle='#9b2a20';c.lineWidth=2;c.strokeRect(X-5,Y-5,10,10)}}
+  if(S.pin){const X=sx(S.pin.x),Y=sy(S.pin.y);c.strokeStyle='#9b2a20';c.lineWidth=1.6;c.beginPath();c.arc(X,Y,9,0,7);c.moveTo(X-15,Y);c.lineTo(X-4,Y);c.moveTo(X+4,Y);c.lineTo(X+15,Y);
+    c.moveTo(X,Y-15);c.lineTo(X,Y-4);c.moveTo(X,Y+4);c.lineTo(X,Y+15);c.stroke()}
+  const now=performance.now();
+  for(const s of S.shots){if(now<s.t0||s.done)continue;const t=clamp((now-s.t0)/s.dur,0,1),x=s.from.x+(s.to.x-s.from.x)*t,y=s.from.y+(s.to.y-s.from.y)*t,lift=Math.sin(t*Math.PI)*26;
+    c.fillStyle='rgba(0,0,0,.28)';c.beginPath();c.arc(sx(x),sy(y),2.5,0,7);c.fill();c.fillStyle='#111';c.beginPath();c.arc(sx(x),sy(y)-lift,3,0,7);c.fill()}
+  for(const b of S.bursts){const t=(now-b.t)/650;if(t>1)continue;const X=sx(b.x),Y=sy(b.y);c.beginPath();c.arc(X,Y,6+t*34,0,7);c.strokeStyle=`rgba(179,54,44,${1-t})`;c.lineWidth=4*(1-t)+1;c.stroke();
+    c.beginPath();c.arc(X,Y,10*(1-t),0,7);c.fillStyle=`rgba(255,220,140,${1-t})`;c.fill()}}
+new ResizeObserver(()=>{resize();draw()}).observe(cv);
+
+const pts=new Map();let gest=null;
+cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId);pts.set(e.pointerId,{x:e.offsetX,y:e.offsetY});
+  const a=[...pts.values()];gest={moved:0,t:performance.now(),multi:a.length>1,d0:a.length>1?Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y):0,z0:view.z}});
+cv.addEventListener('pointermove',e=>{const p=pts.get(e.pointerId);if(!p||!gest)return;const dx=e.offsetX-p.x,dy=e.offsetY-p.y;p.x=e.offsetX;p.y=e.offsetY;const a=[...pts.values()];
+  if(a.length>1){gest.multi=true;if(!gest.d0){gest.d0=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);gest.z0=view.z}view.z=gest.z0*Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y)/gest.d0}
+  else{gest.moved+=Math.abs(dx)+Math.abs(dy);if(gest.moved>8){view.cx-=dx/ppm();view.cy+=dy/ppm()}}draw()});
+const up=e=>{const p=pts.get(e.pointerId);pts.delete(e.pointerId);if(!p||!gest)return;
+  if(e.type==='pointerup'&&!gest.multi&&gest.moved<=8&&performance.now()-gest.t<600&&S.phase==='plan'){S.pin={x:Math.round(wx(p.x)),y:Math.round(wy(p.y))};snd('click');updateReads();draw()}
+  if(!pts.size)gest=null};
+cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
+cv.addEventListener('wheel',e=>{e.preventDefault();view.z*=e.deltaY<0?1.2:1/1.2;draw()},{passive:false});
+$('#zIn').onclick=()=>{view.z*=1.6;draw()};$('#zOut').onclick=()=>{view.z/=1.6;draw()};
+$('#zGun').onclick=()=>{view.cx=base().x;view.cy=base().y;draw()};
+$('#zPin').onclick=()=>{if(S.pin){view.cx=S.pin.x;view.cy=S.pin.y;if(view.z<4)view.z=4;draw()}};
+$$('[data-n]').forEach(b=>b.onclick=()=>{if(!S.pin||S.phase!=='plan')return;snd('click');const[dx,dy]=b.dataset.n.split(',').map(Number);
+  S.pin.x=Math.round(S.pin.x/S.step)*S.step+dx*S.step;S.pin.y=Math.round(S.pin.y/S.step)*S.step+dy*S.step;updateReads();draw()});
+$$('[data-step]').forEach(b=>b.onclick=()=>{S.step=+b.dataset.step;$$('[data-step]').forEach(x=>x.classList.toggle('on',x===b))});
+$('#cApply').onclick=()=>{if(!S.pin||S.phase!=='plan')return;snd('click');const az=azOf(base(),S.pin),g=vec(az),u=vec(az+1600),l=+$('#cLR').value*Math.abs(val('#cLRv')),r=+$('#cAD').value*Math.abs(val('#cADv'));
+  S.pin={x:Math.round(S.pin.x+u[0]*l+g[0]*r),y:Math.round(S.pin.y+u[1]*l+g[1]*r)};$('#cLRv').value=0;$('#cADv').value=0;updateReads();draw()};
+function updateReads(){$('#rGunAlt').textContent=S.guns.length?Math.round(gunAlt())+' m':'---';
+  if(!S.pin){$('#rGrid').textContent='도판을 눌러 표정';$('#rAz').textContent='----';$('#rRng').textContent='----';$('#rAlt').textContent='---';return}
+  $('#rGrid').textContent=grid(S.pin,8);$('#rAz').textContent=pad(azOf(base(),S.pin),4)+' 밀';$('#rRng').textContent=Math.round(dist(base(),S.pin)).toLocaleString()+' m';
+  $('#rAlt').textContent=Math.round(alt(S.pin.x,S.pin.y))+' m'}
+
+/* ---------- fire ---------- */
+function fire(){if(!S.layDone)return warn('먼저 네 문을 방열하고 방열 완료를 눌러라.');if(S.phase==='flight'||S.phase==='wait')return warn('탄이 날아가는 중이다.');if(S.phase!=='plan')return warn('무전에서 다음 임무를 받아라.');const T=S.target,c=clamp(val('#iCharge'),1,NC),E=val('#iElev'),A=norm(val('#iAz')),ffe=S.mode==='ffe';
+  if(!S.pin)return warn('표적이 도판에 없다. 도판을 눌러 먼저 표정하라.');
+  if(E<E_MIN||E>E_MAX)return warn(`사각 ${E}밀은 쏠 수 없다. ${E_MIN}–${E_MAX}밀로 다시 내려라.`);
+  if(!ffe&&T.adjLock)return warn('조정 사격은 끝났다. 효력사만 쏠 수 있다.');const nfire=ffe?4:1;if(S.fuze==='vt'&&S.vt<nfire)return warn(`근접신관이 ${S.vt}발뿐이다. 다른 신관을 골라라.`);warn('');
+  const Rt=tblRange(c,E),bAz=azOf(base(),S.pin),bR=dist(base(),S.pin),u=vec(bAz+1600);let a=vec(norm(val('#iAtt')));if(a[0]*u[0]+a[1]*u[1]<0)a=[-a[0],-a[1]];
+  const idx=ffe?[0,1,2,3]:[1],now=performance.now(),dur=clamp(tof(c,E)*1000/6,2500,6000);S.shots=[];
+  idx.forEach((i,k)=>{const g=S.guns[i];let dAz=0,dR=0;
+    if(ffe&&S.sheaf!=='par'){const o=(1.5-i)*80,q=S.sheaf==='conv'?S.pin:S.sheaf==='open'?{x:S.pin.x+u[0]*o,y:S.pin.y+u[1]*o}:{x:S.pin.x+a[0]*o,y:S.pin.y+a[1]*o};
+      dAz=azOf(g,q)-bAz;if(dAz>3200)dAz-=6400;if(dAz<-3200)dAz+=6400;dR=dist(g,q)-bR}
+    const d=vec(A+dAz+g.err),R=Rt+dR,ga=alt(g.x,g.y);let L=R;for(let n=0;n<5;n++)L=R-(alt(g.x+d[0]*L,g.y+d[1]*L)-ga)/2;
+    L+=gauss()*12;const w=gauss()*7,r=vec(A+dAz+g.err+1600);
+    S.shots.push({gun:i,from:{x:g.x,y:g.y},to:{x:g.x+d[0]*L+r[0]*w,y:g.y+d[1]*L+r[1]*w},t0:now+k*380,dur,done:false})});
+  S.ammo-=idx.length;S.used+=idx.length;if(S.fuze==='vt'){S.vt-=idx.length;$('#vtLeft').textContent=S.vt}if(ffe)T.ffe++;else T.adjUsed++;S.phase='flight';S.flight={ffe,tof:tof(c,E),fuze:S.fuze};
+  say('화력지휘소',`${ffe?'효력사':'조정 사격'}. 장약 ${c}, 사각 ${E}, 방위각 ${pad(A,4)}, 신관 ${FZ[S.fuze]}${ffe?', '+{par:'평행',conv:'집중',open:'개방',spec:'특수'}[S.sheaf]+'사향속':''}. 쏴.`,true);
+  snd('thump');buzz(40);updateHud();paintGuns();go('board');
+  const all=S.shots.map(s=>s.to),mx=all.reduce((s,q)=>s+q.x,0)/all.length,my=all.reduce((s,q)=>s+q.y,0)/all.length;
+  if(Math.abs(sx(mx)-view.w/2)>view.w*.42||Math.abs(sy(my)-view.w/2)>view.w*.42){view.cx=mx;view.cy=my}
+  requestAnimationFrame(loop)}
+function loop(){const now=performance.now();let live=false;
+  for(const s of S.shots){if(s.done)continue;live=true;if(now>=s.t0+s.dur){s.done=true;S.marks.push({x:s.to.x,y:s.to.y,gun:s.gun});S.bursts.push({x:s.to.x,y:s.to.y,t:now});
+    snd('boom');buzz(70);if(!reduce){const w=$('#mapwrap');w.classList.remove('shake');void w.offsetWidth;w.classList.add('shake')}}}
+  const f=S.shots[0],left=f?Math.max(0,1-(now-f.t0)/f.dur)*S.flight.tof:0;$('#eta').hidden=!live;if(live)$('#eta').textContent=`탄착까지 ${Math.ceil(left)}초`;
+  S.bursts=S.bursts.filter(b=>now-b.t<700);draw();
+  if(live||S.bursts.length)requestAnimationFrame(loop);else if(S.phase==='flight'){S.phase='wait';setTimeout(resolve,reduce?0:500)}}
+function setMode(v){S.mode=v;$$('#segMode button').forEach(x=>x.classList.toggle('on',x.dataset.v===v))}
+function adjUi(){const T=S.target,n=T?T.adjUsed:0,lock=!!(T&&T.adjLock);$('#adjN').textContent=`${n}/3`;$('#segMode [data-v="adj"]').disabled=lock;if(lock)setMode('ffe')}
+function resolve(){const T=S.target,hits=S.shots.map(s=>s.to),fz=S.flight.fuze,kr=KRT[fz][T.prot];
+  const gAz=azOf(base(),T.c),g=vec(gAz),u=vec(gAz+1600),mx=hits.reduce((s,q)=>s+q.x,0)/hits.length-T.c.x,my=hits.reduce((s,q)=>s+q.y,0)/hits.length-T.c.y;
+  const k=T.rookie?20:10,nz=fz==='vt'?25:0,lat=Math.round((mx*u[0]+my*u[1]+gauss()*nz)/k)*k,rng=Math.round((mx*g[0]+my*g[1]+gauss()*nz)/k)*k;
+  const corr=[lat?`${lat>0?'좌로':'우로'} ${Math.abs(lat)}`:'',rng?`${rng>0?'줄이기':'더하기'} ${Math.abs(rng)}`:''].filter(Boolean).join(', ')||'탄착 양호';
+  if(!S.flight.ffe){const hit=dist(hits[0],T.c)<=KR;S.phase='plan';
+    if(hit){T.adjLock=true;T.adjHit=true;say('관측소',`명중. 조정 사격 끝. 효력사 요청. 이상.`)}
+    else if(T.adjUsed>=3){T.adjLock=true;say('관측소',`${corr}. 조정 사격 3발 모두 빗나갔다. 수정해서 효력사 실시하라. 이상.`)}
+    else say('관측소',`${corr}. 조정 사격 ${T.adjUsed}/3. 이상.`);
+    adjUi();paintGuns();draw();return}
+  for(const e of T.els)if(hits.some(h=>dist(h,e)<=kr))e.dead=true;
+  const frac=T.els.filter(e=>e.dead).length/T.els.length,near=hits.some(h=>dist(h,T.c)<80);
+  T.grade=T.type==='point'?(frac===1?'파괴':near?'제압':'무효'):frac>=.8?'파괴':frac>=.4?'제압':'무효';
+  S.reveal=true;draw();say('관측소',T.grade==='파괴'?'표적 파괴. 사격 끝. 이상.':`효과 ${T.grade}. 사격 끝. 이상.`);endMission()}
+function endMission(){S.phase='result';S.tEnd=performance.now();const T=S.target,sec=Math.round((S.tEnd-S.t0)/1000);
+  const b=T.grade==='파괴'?1000:T.grade==='제압'?400:0,pa=25*Math.max(0,S.used-4),pt=Math.min(300,sec),first=T.grade==='파괴'&&S.used===4?300:0,hitB=T.adjHit?100:0,sc=Math.max(0,b-pa-pt+first+hitB);
+  S.total+=sc;updateHud();paintGuns();draw();
+  const lay=S.guns.map((g,i)=>g.err?`${i+1}번포 ${g.err>0?'+':''}${g.err}밀`:'').filter(Boolean).join(', ')||'없음';
+  const best={point:'집중',area:'평행',line:'개방',oblique:'특수'}[T.type]+', 신관은 '+{open:'순발이나 근접',trench:'근접',hard:'지연'}[T.prot];
+  $('#resCard').innerHTML=`<div class="stamp">${T.grade==='파괴'?'<svg viewBox="-1.2 -1.2 2.4 2.4" aria-hidden="true"><g fill="currentColor"><circle cy="-.2" r=".82"/><rect x="-.46" y=".3" width=".92" height=".62"/></g><g fill="#d8cdb0"><circle cx="-.32" cy="-.15" r=".22"/><circle cx=".32" cy="-.15" r=".22"/><path d="M0 .12-.11.36h.22z"/><path d="M-.26.56h.06v.4h-.06zM-.03.56h.06v.4h-.06zM.2.56h.06v.4H.2z"/></g></svg>':''}
+    <div><div class="label" style="color:#5c5648">임무 ${S.mission} · ${T.name}</div><h2>표적 ${T.grade}</h2></div></div>
+    <dl><dt>기본 점수</dt><dd>${b}</dd><dt>사용 탄 ${S.used}발</dt><dd>−${pa}</dd><dt>소요 시간 ${sec}초</dt><dd>−${pt}</dd><dt>초탄 효력사 파괴</dt><dd>+${first}</dd><dt>조정 사격 명중</dt><dd>+${hitB}</dd>
+    <dt style="border-top:2px solid #2a2822;padding-top:4px">임무 점수</dt><dd style="border-top:2px solid #2a2822;padding-top:4px">${sc}</dd></dl>
+    <small>남은 방열 오차: ${lay}. 이 표적에 맞는 사향속은 ${best}이다.${T.rookie?' 신병 관측병의 좌표는 100m 단위였다.':''}</small>
+    <div class="row"><button class="btn" type="button" id="resMap" style="flex:1">도판 확인</button><button class="btn go" type="button" id="resNext" style="flex:1.4">${S.mission%3===0?'진지 변환':'다음 임무'}</button></div>`;
+  setTimeout(()=>{$('#ovResult').hidden=false;$('#resNext').focus()},reduce?0:1400);
+  $('#resMap').onclick=()=>{$('#ovResult').hidden=true;go('board');$('#radioHint').textContent='도판을 확인했으면 무전에서 다음 임무를 받아라.';$('#ticker').textContent='다음 임무를 받으려면 여기를 눌러라';$('#ticker').onclick=next};
+  $('#resNext').onclick=next}
+function next(){$('#ticker').onclick=null;$('#ovResult').hidden=true;if(S.phase!=='result')return;go('radio');if(S.mission%3===0)occupy();else newMission()}
+
+/* ---------- lever ---------- */
+(function(){const k=$('#knob'),tr=$('#lever');let drag=null;const max=()=>Math.max(1,tr.clientWidth-k.offsetWidth-6);
+  const back=()=>{k.style.transition='transform .18s';k.style.transform='';setTimeout(()=>k.style.transition='',200)};
+  const finish=force=>{if(!drag)return;const m=drag.m;drag=null;back();if(force||m>=max()*.55)fire();else if(m<8)warn('레버를 오른쪽 끝까지 밀어야 격발된다.')};
+  tr.addEventListener('pointerdown',e=>{e.preventDefault();drag={x:e.clientX,m:0};try{tr.setPointerCapture(e.pointerId)}catch(_){}});
+  tr.addEventListener('pointermove',e=>{if(!drag)return;drag.m=clamp(e.clientX-drag.x,0,max());k.style.transform=`translateX(${drag.m}px)`;if(drag.m>=max()*.92)finish(true)});
+  tr.addEventListener('pointerup',()=>finish(false));tr.addEventListener('pointercancel',()=>{drag=null;back()});
+  k.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();fire()}})})();
+
+/* ---------- hud ---------- */
+function updateHud(){$('#sMis').textContent=Math.max(1,S.mission);$('#sAmmo').textContent=S.ammo;$('#sScore').textContent=S.total}
+setInterval(()=>{if(!S.t0||S.phase==='lay'){$('#sTime').textContent='0:00';return}const s=Math.round(((S.tEnd||performance.now())-S.t0)/1000);$('#sTime').textContent=`${s/60|0}:${pad(s%60,2)}`},500);
+$('#btnManual').onclick=()=>{$('#ovManual').hidden=false;$('#manClose').focus()};$('#manClose').onclick=()=>$('#ovManual').hidden=true;
+
+renderTable();cmdInfo();occupy();
+window.__fdc={S,tblRange,tblElev,tof,alt,grid,azOf,dist,fire,base};
+})();
+</script>
+</body>
+</html>
