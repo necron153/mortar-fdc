@@ -214,6 +214,9 @@ select.btn{padding-right:6px}
     </div>
     <div class="panel">
       <div class="row">
+        <span class="label">OT 방위각</span><input class="num" id="cOT" inputmode="numeric" value="" placeholder="관측소가 부른 값" aria-label="관측선 방위각" style="flex:1;min-width:0;font-size:14px">
+      </div>
+      <div class="row" style="margin-top:7px">
         <span class="label">관측 수정</span>
         <select class="btn" id="cLR" aria-label="좌우"><option value="-1">좌로</option><option value="1">우로</option></select>
         <input class="num sm" id="cLRv" inputmode="numeric" value="0" aria-label="좌우 미터">
@@ -288,7 +291,7 @@ select.btn{padding-right:6px}
       <li><b>사표</b> 보조사거리가 들어가는 장약을 고르고 사각을 읽는다. 사거리 끝단보다 중간대가 정확하다.</li>
       <li><b>사향속</b> 점표적은 집중, 지역표적은 평행, 포목선에 가로놓인 선표적은 개방, 비스듬한 선표적은 특수에 자세를 넣는다.</li>
       <li><b>신관</b> 순발은 노출 표적에 살상범위 40m. 근접은 공중에서 터져 노출 표적 55m, 무개 참호 40m지만 임무당 4발뿐이고 탄착 관측이 흐려진다. 지연은 유개 엄폐호를 뚫는다. 순발과 근접은 엄폐호에 듣지 않는다.</li>
-      <li><b>사격</b> 조정 사격은 기준포로 한 발씩, 최대 3발이다. 한 발이라도 표적 40m 안에 떨어지면 명중이고 곧바로 효력사로 넘어간다. 3발이 모두 빗나가면 마지막 수정을 반영해 효력사만 쏜다. 효력사는 4문 한 번이고 그것으로 임무가 끝난다. 관측소 수정은 포목선 기준으로 온다. 도판의 관측 수정으로 핀을 옮기고 제원을 다시 뽑는다.</li>
+      <li><b>사격</b> 조정 사격은 기준포로 한 발씩, 최대 3발이다. 한 발이라도 표적 40m 안에 떨어지면 명중이고 곧바로 효력사로 넘어간다. 3발이 모두 빗나가면 마지막 수정을 반영해 효력사만 쏜다. 효력사는 4문 한 번이고 그것으로 임무가 끝난다. 관측소는 사격요청 때 관측선(OT) 방위각을 부르고, 수정은 그 관측선 기준으로 온다. 더하기는 관측소에서 멀어지는 쪽이다. 도판에 OT 방위각을 넣고 관측 수정으로 핀을 옮기고 제원을 다시 뽑는다.</li>
     </ol>
     <small>지형은 생성한 가상 지형이고 좌표는 MGRS 형식만 따른다. 사표는 게임용 탄도 모형이며 장약은 6호까지, 최대사거리 6,250m, 살상범위 40m로 맞췄다.</small>
     <button class="btn go" type="button" id="manClose">닫기</button>
@@ -390,9 +393,11 @@ function newMission(){S.mission++;S.phase='plan';S.ammo=7;S.vt=4;$('#vtLeft').te
   else{att=type==='line'?gAz+1600:gAz+1600+(Math.random()<.5?-1:1)*rnd(500,900);att=Math.round(norm(att)%3200/10)*10;const a=vec(att);
     for(let s=-140;s<=140;s+=40)els.push({x:c.x+a[0]*s,y:c.y+a[1]*s});if(type==='line')prot='trench';name=type==='line'?'적 참호선':'도로상의 적 차량 종대';desc=`선표적, ${type==='line'?'무개 참호':'노출'}, 길이 280, 자세 ${pad(att,4)}`}
   const rookie=S.mission>3&&Math.random()<.5,sg=rookie?45:12,rep={x:c.x+gauss()*sg,y:c.y+gauss()*sg},digits=rookie?6:8;
-  S.target={type,c,els,att,name,rookie,prot,adjUsed:0,ffe:0,grade:'무효'};
+  let op;for(let k=0;k<300;k++){const v=vec(azOf(c,base())+rnd(-1400,1400)),d=rnd(700,1800);op={x:c.x+v[0]*d,y:c.y+v[1]*d};if(op.x>40300&&op.x<47700&&op.y>10300&&op.y<17700)break}
+  const otAz=norm(Math.round(azOf(op,c)/10)*10)%6400;$('#cOT').value='';
+  S.target={type,c,els,att,name,rookie,prot,op,otAz,adjUsed:0,ffe:0,grade:'무효'};
   $('#iAtt').value='';setDefs(DEF0);
-  adjUi();setMode('adj');say(rookie?'관측소(신병)':'관측소',`화력지휘소, 여기는 관측소. 사격임무. 좌표 ${grid(rep,digits)}. ${name}. ${desc}. 이상.`);
+  adjUi();setMode('adj');say(rookie?'관측소(신병)':'관측소',`화력지휘소, 여기는 관측소. 사격임무. 좌표 ${grid(rep,digits)}, 방위각 ${pad(otAz,4)}. ${name}. ${desc}. 이상.`);
   $('#radioHint').textContent='도판에 좌표를 표정하고 제원을 뽑아라.';$('[data-st="board"]').classList.add('alert');updateHud();updateReads();paintGuns();draw()}
 
 /* ---------- lay ---------- */
@@ -423,7 +428,7 @@ $$('[data-inc]').forEach(b=>b.onclick=()=>{snd('click');const[k,d]=b.dataset.inc
   if(k==='charge')$('#iCharge').value=clamp(val('#iCharge')+ +d,1,NC);
   if(k==='elev')$('#iElev').value=clamp(val('#iElev')+ +d,E_MIN,E_MAX);
   if(k==='az')$('#iAz').value=pad(norm(val('#iAz')+ +d),4);cmdInfo()});
-['#iCharge','#iElev','#iAz','#iD0','#iD2','#iD3'].forEach(s=>$(s).oninput=cmdInfo);
+['#iCharge','#iElev','#iAz','#iD0','#iD2','#iD3'].forEach(s=>$(s).oninput=cmdInfo);$('#cOT').oninput=()=>draw();
 $('#defCopy').onclick=()=>{snd('click');setDefs(norm(val('#iAz')));cmdInfo()};
 $('#iAtt').oninput=()=>{updateReads();draw()};
 $('#segRg').onclick=e=>{const b=e.target.closest('button');if(!b)return;snd('click');S.rg=+b.dataset.v;$$('#segRg button').forEach(x=>x.classList.toggle('on',x===b));updateReads();draw()};
@@ -479,6 +484,9 @@ function draw(){if(S.station!=='board')return;clampView();const W=view.w,p=ppm()
   if(S.target&&(S.reveal||S.target.els.some(e=>e.dead)))for(const e of S.target.els){const X=sx(e.x),Y=sy(e.y);
     if(e.dead)skull(c,X,Y,clamp(7*Math.sqrt(view.z),8,16));else if(S.reveal){c.strokeStyle='#9b2a20';c.lineWidth=2;c.strokeRect(X-5,Y-5,10,10)}}
   if(S.pin&&S.guns.length&&S.sheaf!=='par'&&S.sheaf!=='conv'&&S.phase==='plan')S.guns.forEach((g,i)=>{const q=aimPt(i),X=sx(q.x),Y=sy(q.y);c.strokeStyle=c.fillStyle='#143c6e';c.lineWidth=1.5;c.beginPath();c.moveTo(X-5,Y);c.lineTo(X+5,Y);c.moveTo(X,Y-5);c.lineTo(X,Y+5);c.stroke();if(p>.1)c.fillText(i+1,X+9,Y-8)});
+  if(S.target&&S.target.op&&S.phase!=='lay'){const o=S.target.op,X=sx(o.x),Y=sy(o.y);
+    if($('#cOT').value.trim()!==''){const v=vec(norm(val('#cOT')));c.beginPath();c.moveTo(X,Y);c.lineTo(X+v[0]*2600*p,Y-v[1]*2600*p);c.strokeStyle='rgba(30,95,60,.7)';c.lineWidth=1.1;c.setLineDash([7,3,2,3]);c.stroke();c.setLineDash([])}
+    c.beginPath();c.moveTo(X,Y-7);c.lineTo(X+6.5,Y+5);c.lineTo(X-6.5,Y+5);c.closePath();c.fillStyle='#d8cdb0';c.fill();c.strokeStyle='#1e5f3c';c.lineWidth=1.8;c.stroke();c.fillStyle='#1e5f3c';c.fillRect(X-1,Y-1,2,2);c.fillText('OP',X,Y+15)}
   if(S.pin){const X=sx(S.pin.x),Y=sy(S.pin.y);c.strokeStyle='#9b2a20';c.lineWidth=1.6;c.beginPath();c.arc(X,Y,9,0,7);c.moveTo(X-15,Y);c.lineTo(X-4,Y);c.moveTo(X+4,Y);c.lineTo(X+15,Y);
     c.moveTo(X,Y-15);c.lineTo(X,Y-4);c.moveTo(X,Y+4);c.lineTo(X,Y+15);c.stroke()}
   const now=performance.now();
@@ -508,7 +516,7 @@ $$('[data-n]').forEach(b=>b.onclick=()=>{if(!S.pin||S.phase!=='plan')return;snd(
   S.pin.x=Math.round(S.pin.x/S.step)*S.step+dx*S.step;S.pin.y=Math.round(S.pin.y/S.step)*S.step+dy*S.step;updateReads();draw()});
 $$('[data-step]').forEach(b=>b.onclick=()=>{S.step=+b.dataset.step;$$('[data-step]').forEach(x=>x.classList.toggle('on',x===b))});
 $('#azSend').onclick=()=>{if(!S.pin)return;snd('click');const i=S.rg,q=i===1?S.pin:aimPt(i);$(DF[i]).value=pad(defOf(azOf(S.guns[i],q)),4);cmdInfo();draw();$('#ticker').textContent=`사격명령에 입력 ▸ ${i+1}번포 편각 ${$(DF[i]).value}`};
-$('#cApply').onclick=()=>{if(!S.pin||S.phase!=='plan')return;snd('click');const az=azOf(base(),S.pin),g=vec(az),u=vec(az+1600),l=+$('#cLR').value*Math.abs(val('#cLRv')),r=+$('#cAD').value*Math.abs(val('#cADv'));
+$('#cApply').onclick=()=>{if(!S.pin||S.phase!=='plan')return;snd('click');if($('#cOT').value.trim()===''){$('#ticker').textContent='관측소가 부른 OT 방위각을 먼저 넣어라.';return}const az=norm(val('#cOT')),g=vec(az),u=vec(az+1600),l=+$('#cLR').value*Math.abs(val('#cLRv')),r=+$('#cAD').value*Math.abs(val('#cADv'));
   S.pin={x:Math.round(S.pin.x+u[0]*l+g[0]*r),y:Math.round(S.pin.y+u[1]*l+g[1]*r)};$('#cLRv').value=0;$('#cADv').value=0;updateReads();draw()};
 function updateReads(){updateReads0();cmdInfo()}
 function updateReads0(){$('#rGunAlt').textContent=S.guns.length?Math.round(gunAlt())+' m':'---';
@@ -543,7 +551,7 @@ function loop(){const now=performance.now();let live=false;
 function setMode(v){S.mode=v;$$('#segMode button').forEach(x=>x.classList.toggle('on',x.dataset.v===v))}
 function adjUi(){const T=S.target,n=T?T.adjUsed:0,lock=!!(T&&T.adjLock);$('#adjN').textContent=`${n}/3`;$('#segMode [data-v="adj"]').disabled=lock;if(lock)setMode('ffe')}
 function resolve(){const T=S.target,hits=S.shots.map(s=>s.to),fz=S.flight.fuze,kr=KRT[fz][T.prot];
-  const gAz=azOf(base(),T.c),g=vec(gAz),u=vec(gAz+1600),mx=hits.reduce((s,q)=>s+q.x,0)/hits.length-T.c.x,my=hits.reduce((s,q)=>s+q.y,0)/hits.length-T.c.y;
+  const gAz=T.otAz,g=vec(gAz),u=vec(gAz+1600),mx=hits.reduce((s,q)=>s+q.x,0)/hits.length-T.c.x,my=hits.reduce((s,q)=>s+q.y,0)/hits.length-T.c.y;
   const k=T.rookie?20:10,nz=fz==='vt'?25:0,lat=Math.round((mx*u[0]+my*u[1]+gauss()*nz)/k)*k,rng=Math.round((mx*g[0]+my*g[1]+gauss()*nz)/k)*k;
   const corr=[lat?`${lat>0?'좌로':'우로'} ${Math.abs(lat)}`:'',rng?`${rng>0?'줄이기':'더하기'} ${Math.abs(rng)}`:''].filter(Boolean).join(', ')||'탄착 양호';
   if(!S.flight.ffe){const hit=dist(hits[0],T.c)<=KR;S.phase='plan';
