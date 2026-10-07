@@ -397,7 +397,7 @@ function occupy(){S.phase='lay';S.layDone=false;
   say('중대장',`진지 점령 완료. 방열 방위각 ${pad(S.M,4)}. 네 문 방열 후 포위치 보고하라. 이상.`);
   $('#radioHint').textContent='포반으로 가서 네 문을 방열하라.';$('[data-st="guns"]').classList.add('alert')}
 function newMission(){S.mission++;S.phase='plan';$('#fireMsg').textContent='';S.used=0;S.ffeUsed=0;S.marks=[];S.pin=null;S.reveal=false;S.defOk=null;S.t0=performance.now();S.tEnd=0;
-  const first=['truck','inf','trench'][S.mission-1],D=first?TG.find(t=>t.k===first):TG[Math.random()*TG.length|0],type=D.type;let c,gAz;
+  if(!S.bag||!S.bag.length){S.bag=TG.map((_,i)=>i);for(let i=S.bag.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[S.bag[i],S.bag[j]]=[S.bag[j],S.bag[i]]}}const D=TG[S.bag.pop()],type=D.type;let c,gAz;
   for(let k=0;k<300;k++){gAz=norm(S.M+rnd(-600,600));const d=S.mission===1?rnd(2000,3400):rnd(1500,6000),v=vec(gAz);
     c={x:base().x+v[0]*d,y:base().y+v[1]*d};const ax=d+(alt(c.x,c.y)-gunAlt())/2;if(c.x>40500&&c.x<47500&&c.y>10500&&c.y<17500&&ax>500&&ax<6000)break}
   gAz=azOf(base(),c);let att=0,els=[];const g=vec(gAz),u=vec(gAz+1600),name=D.name[Math.random()*D.name.length|0];let desc=D.desc;
@@ -453,14 +453,16 @@ function seg(id,key,after){$(id).onclick=e=>{const b=e.target.closest('button');
 seg('#segSheaf','sheaf',()=>{$('#attRow').hidden=S.sheaf!=='spec';updateReads()});seg('#segMeth','meth');
 ($('#segGuns')||{}).onclick=e=>{const b=e.target.closest('button');if(!b)return;snd('click');const i=+b.dataset.g;S.fg[i]=!S.fg[i];b.classList.toggle('on',S.fg[i]);cmdInfo()};$('#iRounds').oninput=()=>cmdInfo();
 const MN={salvo:'제사',right:'익차사',cont:'연속사',named:'지명사 2번포'};
-const TG=[{k:'truck',type:'point',prot:'open',hp:1,name:['개활지에 정차한 적 보급 트럭'],desc:'점표적, 노출',m:'right',n:4},
- {k:'tent',type:'cluster',prot:'open',hp:1,name:['적 지휘소 천막군'],desc:'소형 지역표적, 노출, 정면 60',m:'right',n:8},
- {k:'bunker',type:'point',prot:'hard',hp:3,name:['적 기관총 유개호','적 관측소 벙커'],desc:'점표적, 유개 엄폐, 견고',m:'cont',n:16},
- {k:'inf',type:'area',prot:'open',hp:1,name:['개활지에 집결한 적 보병'],desc:'지역표적, 노출, 정면 150',m:'right',n:8},
- {k:'camp',type:'area',prot:'open',hp:2,name:['적 숙영지'],desc:'지역표적, 노출, 정면 150, 병력 밀집',m:'cont',n:16},
- {k:'trench',type:'line',prot:'trench',hp:1,name:['적 참호선'],desc:'선표적, 무개 참호, 길이 280',m:'right',n:8},
- {k:'convoy',type:'oblique',prot:'open',hp:1,name:['도로상의 적 차량 종대'],desc:'선표적, 노출, 길이 280',m:'right',n:8},
- {k:'mortar',type:'cluster',prot:'trench',hp:2,name:['적 박격포 진지'],desc:'소형 지역표적, 포상 엄폐, 정면 60',m:'cont',n:12}];
+const TGG=[
+ ['point','open',1,4,'점표적, 노출',['보급 트럭','지휘 차량','통신 중계 차량','유조차','견인포 1문','대공 기관포','노출된 무반동총조','관측병 2명','저격수 은신처','급수 차량','야전 취사 차량','탄약 운반 차량','정찰 오토바이조','전파 탐지기','탐조등']],
+ ['point','hard',3,16,'점표적, 유개 엄폐, 견고',['기관총 유개호','관측소 벙커','대전차포 엄체호','지휘 벙커','통신 벙커','탄약 엄체호','콘크리트 토치카','동굴 진지 입구','유개 교통호 교차점','반지하 지휘소','중기관총 토치카','저격 벙커']],
+ ['cluster','open',1,8,'소형 지역표적, 노출, 정면 60',['지휘소 천막군','야전 취사장','야전 정비소','급유소','통신소 천막','보급품 야적장','포병 관측반','공병 장비 집결지','도하 준비조','탄약 하역조','대전차 미사일조','야전 전화 교환소','임시 검문소','연료통 야적장']],
+ ['cluster','trench',2,12,'소형 지역표적, 포상 엄폐, 정면 60',['박격포 진지','대공포 진지','견인포 진지','무반동총 진지','무개 기관총 진지','대전차포 진지','다련장 로켓 진지','고사기관총 진지','유탄발사기 진지','관측 참호','전초 진지','청음초']],
+ ['area','open',1,8,'지역표적, 노출, 정면 150',['개활지에 집결한 보병','공격 대기 중인 보병 중대','행군 휴식 중인 병력','하차 중인 차량화 보병','도하 대기 병력','재편성 중인 병력','배식 중인 병력','보급 수령 병력','침투조 집결지','집결 중인 예비대','차량 주차장','공병 작업대','헬기 강습 착륙 병력','진지 공사 중인 병력']],
+ ['area','open',2,16,'지역표적, 노출, 정면 150, 밀집',['숙영지','대대 집결지','보급소','탄약 집적소','유류 집적소','차량 정비 집결지','포병 탄약 보급소','야전 병영','장비 집적소']],
+ ['line','trench',1,8,'선표적, 무개 참호, 길이 280',['참호선','전방 방어선','교통호','능선 참호','역사면 참호','소대 방어진지','철조망 뒤 산병호','하천 제방 방어선','도로 차단 진지','마을 외곽 방어선','수목선 방어진지','고지 정상 참호']],
+ ['oblique','open',1,8,'선표적, 노출, 길이 280',['도로상 차량 종대','행군 종대','보급 수송대','능선을 넘는 보병 종대','하천을 건너는 종대','철수 중인 병력 종대','견인포 행군 종대','가교 자재 수송대','계곡로 침투 종대','마필 수송대','야간 차량 행렬','전차를 따르는 보병 종대']]];
+const TG=[];for(const[type,prot,hp,n,desc,names]of TGG)for(const nm of names)TG.push({k:nm,type,prot,hp,n,desc,name:['적 '+nm]});
 seg('#segMode','mode',()=>setMode(S.target&&S.target.adjLock?'ffe':S.mode));seg('#segFuze','fuze');
 const FZ={pd:'순발',vt:'근접',dly:'지연'},KRT={pd:{open:KR,trench:15,hard:0},vt:{open:55,trench:KR,hard:0},dly:{open:15,trench:20,hard:25}};
 function warn(m){$('#fireMsg').textContent=m;if(m){snd('click');$('#ticker').textContent='포반장 ▸ '+m}}
