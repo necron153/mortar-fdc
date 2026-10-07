@@ -27,3 +27,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release create "v${{ github.run_number }}" mortar-fdc.apk --title "박격포 사격지휘소 v0.${{ github.run_number }}" --notes "테스트용 APK"
+      - name: Publish web version
+        run: |
+          mkdir site && cp app/src/main/assets/index.html site/ && touch site/.nojekyll
+          cd site && git init -q -b gh-pages && git add -A
+          git -c user.name="github-actions" -c user.email="actions@github.com" commit -qm "web build ${{ github.run_number }}"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" gh-pages
