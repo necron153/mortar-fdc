@@ -302,7 +302,7 @@ select.btn{padding-right:6px}
       <li><b>보조사거리</b> 도상사거리 + (핀 표고 − 진지 표고) ÷ 2. 표적이 높으면 늘고 낮으면 준다.</li>
       <li><b>사표</b> 보조사거리가 들어가는 장약을 고르고 사각을 읽는다. 사표는 25m 단위다. 공산오차는 같은 제원으로 쏜 탄의 절반이 그 거리 안에 떨어진다는 뜻이고, 비행시간이 길수록 커진다. 한 발로 안 잡히는 표적에 관측소가 발수를 늘려 부르는 이유다.</li>
       <li><b>사향속</b> 점표적은 집중, 지역표적은 평행, 포목선에 가로놓인 선표적은 개방, 비스듬한 선표적은 특수에 자세를 넣는다.</li>
-      <li><b>신관</b> 순발은 노출 표적에 살상범위 40m. 근접은 공중에서 터져 노출 표적 55m, 무개 참호 40m지만 전체 80발뿐이고 탄착 관측이 흐려진다. 지연은 유개 엄폐호를 뚫는다. 순발과 근접은 엄폐호에 듣지 않는다.</li>
+      <li><b>신관</b> 살상범위는 어느 신관이든 40m다. 표적에 맞지 않는 신관은 범위가 아니라 효과가 줄어든다. 그럭저럭 맞으면 25%, 전혀 맞지 않으면 50% 줄어서 그만큼 발수가 더 든다. 노출 표적은 순발과 근접이 맞고 지연은 50% 감소. 참호와 포상은 근접이 맞고 순발은 25%, 지연은 50% 감소. 유개 엄폐호는 지연이 맞고 순발은 25%, 근접은 50% 감소. 근접신관은 전체 80발뿐이고, 조정 사격에 쓰면 탄착 관측이 흐려진다.</li>
       <li><b>사격방법</b> 효력사는 조정 사격이 끝난 뒤에만 쏜다. 조정 중 명중하거나 3발을 다 쏘면 관측소가 효력사의 방법과 발수를 부른다. 효력사의 사격포, 방법, 발수는 관측소, 화력지휘소, 포진 순으로 통제된다. 관측소가 부르는 발수는 소대 발수다. 화력지휘소는 네 문으로 나눠 포당 발수를 내리고, 총 발수가 소대 발수와 맞아야 포진이 쏜다. 익차사는 1번포부터 4번포까지 2~3초 간격으로 차례로, 연속사는 포마다 쉬지 않고 쏜다. 조정 사격은 기준포 한 문이 쏘고, 효력사는 언제나 소대 네 문 전부가 충분한 발수로 쏜다. 도중에 표적이 파괴되면 관측소가 사격을 중지시켜 남은 탄은 쏘지 않는다. 포마다 60발, 근접신관은 전체 80발이고 보급은 없다. 한 번에 쏠 수 있는 최대 발수는 소대 52발(포당 13발)이다. 조정 사격은 발수에 넣지 않는다.</li>
       <li><b>사격</b> 조정 사격은 기준포로 한 발씩, 최대 3발이다. 한 발이라도 표적 40m 안에 떨어지면 명중이고 곧바로 효력사로 넘어간다. 3발이 모두 빗나가면 마지막 수정을 반영해 효력사만 쏜다. 효력사에 들어가면 관측소는 더 이상 수정을 부르지 않고 효과만 알린다. 표적이 파괴되면 끝나고, 아니면 같은 통제로 세 번까지 반복하거나 사격 끝을 보고한다. 관측소는 사격요청 때 OTAZ(관측소에서 표적을 보는 방위각)를 부르고, 수정은 그 관측선 기준으로 온다. 더하기는 관측소에서 멀어지는 쪽이다. 도판에 OTAZ를 넣고 관측 수정으로 핀을 옮기고 제원을 다시 뽑는다.</li>
     </ol>
@@ -465,7 +465,7 @@ const TGG=[
  ['oblique','open',1,8,'선표적, 노출, 길이 280',['도로상 차량 종대','행군 종대','보급 수송대','능선을 넘는 보병 종대','하천을 건너는 종대','철수 중인 병력 종대','견인포 행군 종대','가교 자재 수송대','계곡로 침투 종대','마필 수송대','야간 차량 행렬','전차를 따르는 보병 종대']]];
 const TG=[];for(const[type,prot,hp,n,desc,names]of TGG)for(const nm of names)TG.push({k:nm,type,prot,hp,n,desc,name:['적 '+nm]});
 seg('#segMode','mode',()=>setMode(S.target&&S.target.adjLock?'ffe':S.mode));seg('#segFuze','fuze');
-const FZ={pd:'순발',vt:'근접',dly:'지연'},KRT={pd:{open:KR,trench:15,hard:0},vt:{open:55,trench:KR,hard:0},dly:{open:15,trench:20,hard:25}};
+const FZ={pd:'순발',vt:'근접',dly:'지연'},KRT={pd:{open:KR,trench:KR,hard:KR},vt:{open:KR,trench:KR,hard:KR},dly:{open:KR,trench:KR,hard:KR}},EFF={pd:{open:1,trench:.75,hard:.75},vt:{open:1,trench:1,hard:.5},dly:{open:.5,trench:.5,hard:1}};
 function warn(m){$('#fireMsg').textContent=m;if(m){snd('click');$('#ticker').textContent='포반장 ▸ '+m}}
 
 /* ---------- firing table ---------- */
@@ -573,14 +573,14 @@ function fire(){if(!S.layDone)return warn('먼저 네 문을 방열하고 포위
     if(ffe)g.ammo-=nr});
   const cnt=sel.length*nr;if(ffe){S.used+=cnt;if(S.fuze==='vt')S.vt-=cnt}
   if(ffe){T.ffe++;S.ffeUsed+=cnt;}else T.adjUsed++;
-  S.flashT=now;S.phase='flight';S.flight={ffe,tof:tof(c,E),fuze:S.fuze,sel,meth,kr:KRT[S.fuze][T.prot]};
+  S.flashT=now;S.phase='flight';S.flight={ffe,tof:tof(c,E),fuze:S.fuze,sel,meth,kr:KRT[S.fuze][T.prot],eff:EFF[S.fuze][T.prot]};
   say('화력지휘소',`${ffe?'효력사':'조정 사격'}. 장약 ${c}, 사각 ${E}, 편각 ${ffe?sel.slice().sort().map(i=>pad(norm(val(DF[i])),4)).join('/'):pad(A,4)}, 신관 ${FZ[S.fuze]}${ffe?', '+{par:'평행',conv:'집중',open:'개방',spec:'특수'}[S.sheaf]+'사향속, '+(meth==='named'?'지명사 2번포 '+nr+'발':MN[meth]+' 포당 '+nr+'발, 총 '+sel.length*nr+'발'):''}. 쏴.`,true);
   if(ffe)say('포진',meth==='named'?`지명사 수신. 2번포 ${nr}발 발사.`:meth==='cont'?`연속사 포당 ${nr}발 수신. 발사.`:`익차사 포당 ${nr}발 수신. 1번포부터 발사.`);
   snd('thump');buzz(40);updateHud();paintGuns();go('board');
   const all=S.shots.map(s=>s.to),mx=all.reduce((s,q)=>s+q.x,0)/all.length,my=all.reduce((s,q)=>s+q.y,0)/all.length;
   if(Math.abs(sx(mx)-view.w/2)>view.w*.42||Math.abs(sy(my)-view.w/2)>view.w*.42){view.cx=mx;view.cy=my}
   requestAnimationFrame(loop)}
-function onImpact(s,now){const F=S.flight,T=S.target;if(!F.ffe)return;for(const e of T.els)if(!e.dead&&dist(s.to,e)<=F.kr&&--e.hp<=0)e.dead=true;
+function onImpact(s,now){const F=S.flight,T=S.target;if(!F.ffe)return;for(const e of T.els)if(!e.dead&&dist(s.to,e)<=F.kr&&(e.hp-=F.eff)<=1e-6)e.dead=true;
   const fr=T.els.filter(e=>e.dead).length/T.els.length;if((T.els.length===1?fr===1:fr>=.8)&&!F.stop&&F.meth!=='salvo'){F.stop=true;let n=0;
     for(const q of S.shots)if(!q.done&&now<q.t0){q.done=q.cancel=true;n++;S.guns[q.gun].ammo++;S.used--;S.ffeUsed--;if(F.fuze==='vt')S.vt++}
     if(n){F.cancelN=n;say('관측소','표적 파괴. 사격 중지. 이상.');say('화력지휘소','사격 중지.',true);say('포진',`사격 중지. ${n}발 미발사.`);updateHud()}}}
@@ -604,7 +604,7 @@ function resolve(){const T=S.target,hits=S.shots.filter(s=>!s.cancel).map(s=>s.t
   const sel=S.flight.sel.filter(i=>S.shots.some(q=>q.gun===i&&!q.cancel)),gm=sel.map(i=>{const hs=S.shots.filter(q=>q.gun===i&&!q.cancel).map(q=>q.to);return{i,x:hs.reduce((a,q)=>a+q.x,0)/hs.length,y:hs.reduce((a,q)=>a+q.y,0)/hs.length}});
   const frac=T.els.filter(e=>e.dead).length/T.els.length,near=hits.some(h=>dist(h,T.c)<80);
   T.grade=T.els.length===1?(frac===1?'파괴':near?'제압':'무효'):frac>=.8?'파괴':frac>=.5?'제압':'무효';
-  const stray=gm.filter(q=>dist(q,T.c)>200).length;T.stray=Math.max(T.stray||0,stray);T.onT=gm.filter(q=>T.els.some(e=>dist(q,e)<=50)).length;T.fz=fz;T.kr=kr;
+  const stray=gm.filter(q=>dist(q,T.c)>200).length;T.stray=Math.max(T.stray||0,stray);T.onT=gm.filter(q=>T.els.some(e=>dist(q,e)<=50)).length;T.fz=fz;T.kr=kr;T.eff=S.flight.eff;
   if(T.grade==='무효'&&T.onT>=Math.ceil(sel.length*.75))T.grade='제압';if(T.stray>=2)T.grade='무효';
   const per=S.flight.meth==='right'||S.flight.meth==='left'?' '+gm.slice().sort((a,b)=>a.i-b.i).map(q=>{const dx=q.x-T.c.x,dy=q.y-T.c.y,l=Math.round((dx*u[0]+dy*u[1])/10)*10,rg=Math.round((dx*g[0]+dy*g[1])/10)*10;return `${q.i+1}번포 ${[l?(l>0?'우 ':'좌 ')+Math.abs(l):'',rg?(rg>0?'원 ':'근 ')+Math.abs(rg):''].filter(Boolean).join(' ')||'양호'}`}).join(', ')+'.':'';
   draw();const left=S.guns.reduce((a,q)=>a+q.ammo,0);
@@ -618,8 +618,8 @@ function endMission(){S.phase='result';S.tEnd=performance.now();$('#endBtn').hid
   S.total+=sc;if(verdict==='합격')S.pass++;updateHud();paintGuns();draw();
   const lay=S.guns.map((g,i)=>g.err?`${i+1}번포 ${g.err>0?'+':''}${g.err}밀`:'').filter(Boolean).join(', ')||'없음';
   const nk=T.els.filter(e=>e.dead).length,pn={open:'노출 표적',trench:'참호·포상 속 표적',hard:'유개 엄폐호'}[T.prot];let why=`표적 ${T.els.length}곳 중 ${nk}곳을 잡았다. `;
-  if(T.grade!=='파괴'&&T.fz&&T.kr<KR)why+=T.kr?`${FZ[T.fz]}신관은 ${pn}에 살상범위가 ${T.kr}m뿐이라, 탄이 표적에 떨어져도 효과가 작았다. `:`${FZ[T.fz]}신관은 ${pn}에 효과가 없다. `;
-  else if(T.grade!=='파괴'&&T.hp>1)why+=`이 표적은 한 곳에 ${T.hp}발이 들어가야 잡힌다. 발수가 모자랐다. `;
+  if(T.grade!=='파괴'&&T.fz&&T.eff<1)why+=`${FZ[T.fz]}신관은 ${pn}에 효과가 ${Math.round((1-T.eff)*100)}% 줄어든다. 같은 발수로는 모자랐다. `;
+  if(T.grade!=='파괴'&&T.eff===1&&T.hp>1)why+=`이 표적은 한 곳에 ${T.hp}발이 들어가야 잡힌다. 발수가 모자랐다. `;
   else if(T.grade!=='파괴'&&T.onT>=3&&T.els.length>1)why+='탄착이 표적 전체를 덮지 못했다. 사향속을 넓혀야 한다. ';
   const best={point:'집중',cluster:'집중',area:'평행',line:'개방',oblique:'특수'}[T.type]+', 신관은 '+{open:'순발이나 근접',trench:'근접',hard:'지연'}[T.prot],over=campOver();
   $('#resCard').innerHTML=`<div class="stamp">${T.grade==='파괴'?'<svg viewBox="-1.2 -1.2 2.4 2.4" aria-hidden="true"><g fill="currentColor"><circle cy="-.2" r=".82"/><rect x="-.46" y=".3" width=".92" height=".62"/></g><g fill="#d8cdb0"><circle cx="-.32" cy="-.15" r=".22"/><circle cx=".32" cy="-.15" r=".22"/><path d="M0 .12-.11.36h.22z"/><path d="M-.26.56h.06v.4h-.06zM-.03.56h.06v.4h-.06zM.2.56h.06v.4H.2z"/></g></svg>':''}
