@@ -562,18 +562,22 @@ function resolve(){const T=S.target,hits=S.shots.map(s=>s.to),fz=S.flight.fuze,k
   for(const e of T.els)if(hits.some(h=>dist(h,e)<=kr))e.dead=true;
   const frac=T.els.filter(e=>e.dead).length/T.els.length,near=hits.some(h=>dist(h,T.c)<80);
   T.grade=T.type==='point'?(frac===1?'파괴':near?'제압':'무효'):frac>=.8?'파괴':frac>=.5?'제압':'무효';
-  T.stray=hits.filter(h=>dist(h,T.c)>200).length;if(T.stray>=2)T.grade='무효';
+  T.stray=hits.filter(h=>dist(h,T.c)>200).length;T.onT=hits.filter(h=>T.els.some(e=>dist(h,e)<=50)).length;T.fz=fz;T.kr=kr;
+  if(T.grade==='무효'&&T.onT>=3)T.grade='제압';if(T.stray>=2)T.grade='무효';
   S.reveal=true;draw();say('관측소',(T.stray?`이탈탄 ${T.stray}발. `:'')+(T.grade==='파괴'?'표적 파괴. 사격 끝. 이상.':`효과 ${T.grade}. 사격 끝. 이상.`));endMission()}
 function endMission(){S.phase='result';S.tEnd=performance.now();const T=S.target,sec=Math.round((S.tEnd-S.t0)/1000);
   const b=T.grade==='파괴'?1000:T.grade==='제압'?300:0,stray=T.stray||0,ps=200*stray,verdict=T.grade==='파괴'&&!stray?'합격':T.grade==='무효'?'불합격':'미흡',pa=25*Math.max(0,S.used-4),pt=Math.min(300,sec),first=T.grade==='파괴'&&S.used===4?300:0,hitB=T.adjHit?100:0,sc=T.grade==='무효'?0:Math.max(0,b-pa-pt-ps+first+hitB);
   S.total+=sc;updateHud();paintGuns();draw();
   const lay=S.guns.map((g,i)=>g.err?`${i+1}번포 ${g.err>0?'+':''}${g.err}밀`:'').filter(Boolean).join(', ')||'없음';
+  const nk=T.els.filter(e=>e.dead).length,pn={open:'노출 표적',trench:'참호 속 병력',hard:'유개 엄폐호'}[T.prot];let why=`표적 ${T.els.length}곳 중 ${nk}곳을 잡았다. `;
+  if(T.grade!=='파괴'&&T.fz&&T.kr<KR)why+=T.kr?`${FZ[T.fz]}신관은 ${pn}에 살상범위가 ${T.kr}m뿐이라, 탄이 표적에 떨어져도 효과가 작았다. `:`${FZ[T.fz]}신관은 ${pn}에 효과가 없다. `;
+  else if(T.grade!=='파괴'&&T.onT>=3&&T.els.length>1)why+='탄착이 표적 전체를 덮지 못했다. 사향속을 넓혀야 한다. ';
   const best={point:'집중',area:'평행',line:'개방',oblique:'특수'}[T.type]+', 신관은 '+{open:'순발이나 근접',trench:'근접',hard:'지연'}[T.prot];
   $('#resCard').innerHTML=`<div class="stamp">${T.grade==='파괴'?'<svg viewBox="-1.2 -1.2 2.4 2.4" aria-hidden="true"><g fill="currentColor"><circle cy="-.2" r=".82"/><rect x="-.46" y=".3" width=".92" height=".62"/></g><g fill="#d8cdb0"><circle cx="-.32" cy="-.15" r=".22"/><circle cx=".32" cy="-.15" r=".22"/><path d="M0 .12-.11.36h.22z"/><path d="M-.26.56h.06v.4h-.06zM-.03.56h.06v.4h-.06zM.2.56h.06v.4H.2z"/></g></svg>':''}
     <div><div class="label" style="color:#5c5648">임무 ${S.mission} · ${T.name}</div><h2>${verdict} · ${T.grade}</h2></div></div>
     <dl><dt>기본 점수</dt><dd>${b}</dd><dt>사용 탄 ${S.used}발</dt><dd>−${pa}</dd><dt>소요 시간 ${sec}초</dt><dd>−${pt}</dd><dt>이탈탄 ${stray}발</dt><dd>−${ps}</dd><dt>초탄 효력사 파괴</dt><dd>+${first}</dd><dt>조정 사격 명중</dt><dd>+${hitB}</dd>
     <dt style="border-top:2px solid #2a2822;padding-top:4px">임무 점수</dt><dd style="border-top:2px solid #2a2822;padding-top:4px">${sc}</dd></dl>
-    <small>${stray?`표적에서 200m 넘게 벗어난 탄이 ${stray}발이다. 날개포 편각을 확인하라. 이탈탄이 2발 이상이면 불합격이다. `:''}남은 방열 오차: ${lay}. 이 표적에 맞는 사향속은 ${best}이다.${T.rookie?' 신병 관측병의 좌표는 100m 단위였다.':''}</small>
+    <small>${why}${stray?`표적에서 200m 넘게 벗어난 탄이 ${stray}발이다. 날개포 편각을 확인하라. 이탈탄이 2발 이상이면 불합격이다. `:''}남은 방열 오차: ${lay}. 이 표적에 맞는 사향속은 ${best}이다.${T.rookie?' 신병 관측병의 좌표는 100m 단위였다.':''}</small>
     <div class="row"><button class="btn" type="button" id="resMap" style="flex:1">도판 확인</button><button class="btn go" type="button" id="resNext" style="flex:1.4">${S.mission%3===0?'진지 변환':'다음 임무'}</button></div>`;
   setTimeout(()=>{$('#ovResult').hidden=false;$('#resNext').focus()},reduce?0:1400);
   $('#resMap').onclick=()=>{$('#ovResult').hidden=true;go('board');$('#radioHint').textContent='도판을 확인했으면 무전에서 다음 임무를 받아라.';$('#ticker').textContent='다음 임무를 받으려면 여기를 눌러라';$('#ticker').onclick=next};
