@@ -406,7 +406,7 @@ function newMission(){S.mission++;S.phase='plan';$('#fireMsg').textContent='';S.
   else if(type==='area'){for(const l of[-90,-45,0,45])for(const dp of[-12,12])els.push({x:c.x+u[0]*l+g[0]*dp,y:c.y+u[1]*l+g[1]*dp})}
   else{att=type==='line'?gAz+1600:gAz+1600+(Math.random()<.5?-1:1)*rnd(500,900);att=Math.round(norm(att)%3200/10)*10;let a=vec(att);if(a[0]*u[0]+a[1]*u[1]<0)a=[-a[0],-a[1]];
     for(let q=-180;q<=100;q+=40)els.push({x:c.x+a[0]*q,y:c.y+a[1]*q});desc+=`, 자세 ${pad(att,4)}`}
-  els.forEach(e=>e.hp=D.hp);const m=D.m,par=D.n;
+  els.forEach(e=>e.hp=D.hp);S.mh=S.mh||[];let m=Math.random()<.5?'right':'cont';const h=S.mh.slice(-2);if(h.length&&h.every(x=>x===m)&&(h.length>1||Math.random()<.6))m=m==='right'?'cont':'right';S.mh.push(m);const par=D.n;
   const rookie=S.mission>3&&Math.random()<.5,sg=rookie?45:12,rep={x:c.x+gauss()*sg,y:c.y+gauss()*sg},digits=rookie?6:8;
   let op;for(let k=0;k<300;k++){const v=vec(azOf(c,base())+rnd(-1400,1400)),d=rnd(700,1800);op={x:c.x+v[0]*d,y:c.y+v[1]*d};if(op.x>40300&&op.x<47700&&op.y>10300&&op.y<17700)break}
   const otAz=norm(Math.round(azOf(op,c)/10)*10)%6400;$('#cOT').value='';
