@@ -305,7 +305,7 @@ select.btn{padding-right:6px}
       <li><b>사표</b> 보조사거리가 들어가는 장약을 고르고 사각을 읽는다. 사표는 25m 단위다. 공산오차는 같은 제원으로 쏜 탄의 절반이 그 거리 안에 떨어진다는 뜻이고, 비행시간이 길수록 커진다. 한 발로 안 잡히는 표적에 관측소가 발수를 늘려 부르는 이유다.</li>
       <li><b>사향속</b> 점표적은 집중, 지역표적은 평행, 포목선에 가로놓인 선표적은 개방, 비스듬한 선표적은 특수에 자세를 넣는다.</li>
       <li><b>신관</b> 순발은 노출 표적에 살상범위 40m. 근접은 공중에서 터져 노출 표적 55m, 무개 참호 40m지만 전체 80발뿐이고 탄착 관측이 흐려진다. 지연은 유개 엄폐호를 뚫는다. 순발과 근접은 엄폐호에 듣지 않는다.</li>
-      <li><b>사격방법</b> 효력사의 사격포, 방법, 발수는 관측소, 화력지휘소, 포진 순으로 통제된다. 관측소가 부르는 발수는 소대 발수다. 화력지휘소는 사격포 수로 나눠 포당 발수를 내리고, 총 발수가 소대 발수와 맞아야 포진이 쏜다. 익차사는 1번포부터 4번포까지 차례로, 연속사는 포마다 쉬지 않고 쏜다. 사격포에서 2번포만 남기면 지명사다. 도중에 표적이 파괴되면 관측소가 사격을 중지시켜 남은 탄은 쏘지 않는다. 포마다 60발, 근접신관은 전체 80발이고 보급은 없다. 한 번에 쏠 수 있는 최대 발수는 소대 52발(포당 13발)이다. 조정 사격은 발수에 넣지 않는다.</li>
+      <li><b>사격방법</b> 효력사는 조정 사격이 끝난 뒤에만 쏜다. 조정 중 명중하거나 3발을 다 쏘면 관측소가 효력사의 방법과 발수를 부른다. 효력사의 사격포, 방법, 발수는 관측소, 화력지휘소, 포진 순으로 통제된다. 관측소가 부르는 발수는 소대 발수다. 화력지휘소는 사격포 수로 나눠 포당 발수를 내리고, 총 발수가 소대 발수와 맞아야 포진이 쏜다. 익차사는 1번포부터 4번포까지 차례로, 연속사는 포마다 쉬지 않고 쏜다. 사격포에서 2번포만 남기면 지명사다. 도중에 표적이 파괴되면 관측소가 사격을 중지시켜 남은 탄은 쏘지 않는다. 포마다 60발, 근접신관은 전체 80발이고 보급은 없다. 한 번에 쏠 수 있는 최대 발수는 소대 52발(포당 13발)이다. 조정 사격은 발수에 넣지 않는다.</li>
       <li><b>사격</b> 조정 사격은 기준포로 한 발씩, 최대 3발이다. 한 발이라도 표적 40m 안에 떨어지면 명중이고 곧바로 효력사로 넘어간다. 3발이 모두 빗나가면 마지막 수정을 반영해 효력사만 쏜다. 효력사는 표적이 파괴되면 끝나고, 아니면 수정해서 세 번까지 반복하거나 사격 끝을 보고한다. 관측소는 사격요청 때 OTAZ(관측소에서 표적을 보는 방위각)를 부르고, 수정은 그 관측선 기준으로 온다. 더하기는 관측소에서 멀어지는 쪽이다. 도판에 OTAZ를 넣고 관측 수정으로 핀을 옮기고 제원을 다시 뽑는다.</li>
     </ol>
     <small>지형은 생성한 가상 지형이고 좌표는 MGRS 형식만 따른다. 사표는 게임용 탄도 모형이며 장약은 6호까지, 최대사거리 6,250m, 살상범위 40m로 맞췄다.</small>
@@ -414,7 +414,7 @@ function newMission(){S.mission++;S.phase='plan';$('#fireMsg').textContent='';S.
   const otAz=norm(Math.round(azOf(op,c)/10)*10)%6400;$('#cOT').value='';
   S.target={type,c,els,att,name,rookie,prot:D.prot,hp:D.hp,req:{m,n:D.n},par,op,otAz,adjUsed:0,ffe:0,grade:'무효'};
   $('#iAtt').value='';setDefs(DEF0);$('#endBtn').hidden=true;
-  adjUi();setMode('adj');say(rookie?'관측소(신병)':'관측소',`화력지휘소, 여기는 관측소. 사격임무. 좌표 ${grid(rep,digits)}, OTAZ ${pad(otAz,4)}. ${name}. ${desc}. 효력사 ${MN[m]}, ${m==='named'?'':'소대 '}${D.n}발. 이상.`);
+  adjUi();setMode('adj');say(rookie?'관측소(신병)':'관측소',`화력지휘소, 여기는 관측소. 사격임무. 좌표 ${grid(rep,digits)}, OTAZ ${pad(otAz,4)}. ${name}. ${desc}. 조정 사격. 이상.`);
   $('#radioHint').textContent='도판에 좌표를 표정하고 제원을 뽑아라.';$('[data-st="board"]').classList.add('alert');updateHud();updateReads();paintGuns();draw()}
 
 /* ---------- lay ---------- */
@@ -457,7 +457,7 @@ $('#segGuns').onclick=e=>{const b=e.target.closest('button');if(!b)return;snd('c
 const MN={salvo:'제사',right:'익차사',cont:'연속사',named:'지명사 2번포'};
 const TG=[{k:'truck',type:'point',prot:'open',hp:1,name:['개활지에 정차한 적 보급 트럭'],desc:'점표적, 노출',m:'named',n:3},
  {k:'tent',type:'cluster',prot:'open',hp:1,name:['적 지휘소 천막군'],desc:'소형 지역표적, 노출, 정면 60',m:'right',n:4},
- {k:'bunker',type:'point',prot:'hard',hp:3,name:['적 기관총 유개호','적 관측소 벙커'],desc:'점표적, 유개 엄폐, 견고',m:'named',n:6},
+ {k:'bunker',type:'point',prot:'hard',hp:3,name:['적 기관총 유개호','적 관측소 벙커'],desc:'점표적, 유개 엄폐, 견고',m:'named',n:8},
  {k:'inf',type:'area',prot:'open',hp:1,name:['개활지에 집결한 적 보병'],desc:'지역표적, 노출, 정면 150',m:'right',n:8},
  {k:'camp',type:'area',prot:'open',hp:2,name:['적 숙영지'],desc:'지역표적, 노출, 정면 150, 병력 밀집',m:'cont',n:12},
  {k:'trench',type:'line',prot:'trench',hp:1,name:['적 참호선'],desc:'선표적, 무개 참호, 길이 280',m:'right',n:8},
@@ -558,7 +558,7 @@ function updateReads0(){$('#rGunAlt').textContent=S.guns.length?Math.round(gunAl
 function fire(){if(!S.layDone)return warn('먼저 네 문을 방열하고 포위치를 보고하라.');if(S.phase==='flight'||S.phase==='wait')return warn('탄이 날아가는 중이다.');if(S.phase!=='plan')return warn('무전에서 다음 임무를 받아라.');const T=S.target,c=clamp(val('#iCharge'),1,NC),E=val('#iElev'),A=norm(val('#iAz')),ffe=S.mode==='ffe';
   if(!S.pin)return warn('표적이 도판에 없다. 도판을 눌러 먼저 표정하라.');
   if(E<E_MIN||E>E_MAX)return warn(`사각 ${E}밀은 쏠 수 없다. ${E_MIN}–${E_MAX}밀로 다시 내려라.`);
-  if(ffe&&S.sheaf==='spec'&&$('#iAtt').value.trim()==='')return warn('특수사향속은 관측소가 부른 표적 자세를 넣어야 한다.');if(!ffe&&T.adjLock)return warn('조정 사격은 끝났다. 효력사만 쏠 수 있다.');
+  if(ffe&&S.sheaf==='spec'&&$('#iAtt').value.trim()==='')return warn('특수사향속은 관측소가 부른 표적 자세를 넣어야 한다.');if(!ffe&&T.adjLock)return warn('조정 사격은 끝났다. 효력사만 쏠 수 있다.');if(ffe&&!T.adjLock)return warn('조정 사격이 끝나고 관측소가 효력사를 불러야 쏠 수 있다.');
   let sel=ffe?[0,1,2,3].filter(i=>S.fg[i]):[1];let nr=ffe?clamp(val('#iRounds'),1,13):1;if(!sel.length)return warn('사격할 포를 하나 이상 지명하라.');
   if(ffe){const q=T.req,ok=(q.m==='named'?(sel.length===1&&sel[0]===1):(sel.length===4&&S.meth===q.m))&&sel.length*nr===q.n;if(!ok)return warn('관측소가 통제한 효력사와 다르다. 무전에서 사격포, 방법, 소대 발수를 확인하라.')}
   if(ffe)for(const i of sel)if(S.guns[i].ammo<nr)return warn(`${i+1}번포 잔탄이 ${S.guns[i].ammo}발뿐이다.`);
@@ -591,14 +591,14 @@ function loop(){const now=performance.now();let live=false;
   S.bursts=S.bursts.filter(b=>now-b.t<700);draw();
   if(live||S.bursts.length)requestAnimationFrame(loop);else if(S.phase==='flight'){S.phase='wait';setTimeout(resolve,reduce?0:500)}}
 function setMode(v){S.mode=v;$('#ffeBox').hidden=v!=='ffe';$$('#segMode button').forEach(x=>x.classList.toggle('on',x.dataset.v===v))}
-function adjUi(){const T=S.target,n=T?T.adjUsed:0,lock=!!(T&&T.adjLock);$('#adjN').textContent=`${n}/3`;$('#segMode [data-v="adj"]').disabled=lock;if(lock)setMode('ffe')}
+function adjUi(){const T=S.target,n=T?T.adjUsed:0,lock=!!(T&&T.adjLock);$('#adjN').textContent=`${n}/3`;$('#segMode [data-v="adj"]').disabled=lock;$('#segMode [data-v="ffe"]').disabled=!lock;if(lock)setMode('ffe')}
 function resolve(){const T=S.target,hits=S.shots.filter(s=>!s.cancel).map(s=>s.to),fz=S.flight.fuze,kr=KRT[fz][T.prot];
   const gAz=T.otAz,g=vec(gAz),u=vec(gAz+1600),mx=hits.reduce((s,q)=>s+q.x,0)/hits.length-T.c.x,my=hits.reduce((s,q)=>s+q.y,0)/hits.length-T.c.y;
   const k=T.rookie?20:10,nz=fz==='vt'?25:0,lat=Math.round((mx*u[0]+my*u[1]+gauss()*nz)/k)*k,rng=Math.round((mx*g[0]+my*g[1]+gauss()*nz)/k)*k;
   const corr=[lat?`${lat>0?'좌로':'우로'} ${Math.abs(lat)}`:'',rng?`${rng>0?'줄이기':'더하기'} ${Math.abs(rng)}`:''].filter(Boolean).join(', ')||'탄착 양호';
-  if(!S.flight.ffe){const hit=dist(hits[0],T.c)<=KR;S.phase='plan';
-    if(hit){T.adjLock=true;T.adjHit=true;say('관측소',`명중. 조정 사격 끝. 효력사 요청. 이상.`)}
-    else if(T.adjUsed>=3){T.adjLock=true;say('관측소',`${corr}. 조정 사격 3발 모두 빗나갔다. 수정해서 효력사 실시하라. 이상.`)}
+  if(!S.flight.ffe){const hit=dist(hits[0],T.c)<=KR,rq=`효력사 ${MN[T.req.m]}, ${T.req.m==='named'?'':'소대 '}${T.req.n}발`;S.phase='plan';
+    if(hit){T.adjLock=true;T.adjHit=true;say('관측소',`명중. ${rq}. 이상.`)}
+    else if(T.adjUsed>=3){T.adjLock=true;say('관측소',`${corr}. 조정 사격 끝. 수정 후 ${rq}. 이상.`)}
     else say('관측소',`${corr}. 조정 사격 ${T.adjUsed}/3. 이상.`);
     adjUi();paintGuns();draw();return}
   const sel=S.flight.sel.filter(i=>S.shots.some(q=>q.gun===i&&!q.cancel)),gm=sel.map(i=>{const hs=S.shots.filter(q=>q.gun===i&&!q.cancel).map(q=>q.to);return{i,x:hs.reduce((a,q)=>a+q.x,0)/hs.length,y:hs.reduce((a,q)=>a+q.y,0)/hs.length}});
@@ -614,7 +614,7 @@ function resolve(){const T=S.target,hits=S.shots.filter(s=>!s.cancel).map(s=>s.t
 $('#endBtn').onclick=()=>{const T=S.target;if(S.phase!=='plan'||!T||!T.ffe)return;snd('click');S.reveal=true;say('화력지휘소','사격 끝.',true);endMission()};
 function campOver(){return S.guns[1].ammo<3||S.guns.reduce((a,q)=>a+q.ammo,0)<12}
 function endMission(){S.phase='result';S.tEnd=performance.now();$('#endBtn').hidden=true;const T=S.target,sec=Math.round((S.tEnd-S.t0)/1000);
-  const b=T.grade==='파괴'?1000:T.grade==='제압'?300:0,stray=T.stray||0,ps=200*stray,verdict=T.grade==='파괴'&&!stray?'합격':T.grade==='무효'?'불합격':'미흡',pa=10*Math.max(0,S.ffeUsed-T.par),pt=Math.min(300,sec),first=T.grade==='파괴'&&T.ffe===1&&!T.adjUsed?300:0,hitB=T.adjHit?100:0,comp=0,sc=T.grade==='무효'?0:Math.max(0,b-pa-pt-ps+first+hitB+comp);
+  const b=T.grade==='파괴'?1000:T.grade==='제압'?300:0,stray=T.stray||0,ps=200*stray,verdict=T.grade==='파괴'&&!stray?'합격':T.grade==='무효'?'불합격':'미흡',pa=10*Math.max(0,S.ffeUsed-T.par),pt=Math.min(300,sec),first=0,hitB=T.adjHit?100:0,comp=0,sc=T.grade==='무효'?0:Math.max(0,b-pa-pt-ps+first+hitB+comp);
   S.total+=sc;if(verdict==='합격')S.pass++;updateHud();paintGuns();draw();
   const lay=S.guns.map((g,i)=>g.err?`${i+1}번포 ${g.err>0?'+':''}${g.err}밀`:'').filter(Boolean).join(', ')||'없음';
   const nk=T.els.filter(e=>e.dead).length,pn={open:'노출 표적',trench:'참호·포상 속 표적',hard:'유개 엄폐호'}[T.prot];let why=`표적 ${T.els.length}곳 중 ${nk}곳을 잡았다. `;
@@ -624,7 +624,7 @@ function endMission(){S.phase='result';S.tEnd=performance.now();$('#endBtn').hid
   const best={point:'집중',cluster:'집중',area:'평행',line:'개방',oblique:'특수'}[T.type]+', 신관은 '+{open:'순발이나 근접',trench:'근접',hard:'지연'}[T.prot],over=campOver();
   $('#resCard').innerHTML=`<div class="stamp">${T.grade==='파괴'?'<svg viewBox="-1.2 -1.2 2.4 2.4" aria-hidden="true"><g fill="currentColor"><circle cy="-.2" r=".82"/><rect x="-.46" y=".3" width=".92" height=".62"/></g><g fill="#d8cdb0"><circle cx="-.32" cy="-.15" r=".22"/><circle cx=".32" cy="-.15" r=".22"/><path d="M0 .12-.11.36h.22z"/><path d="M-.26.56h.06v.4h-.06zM-.03.56h.06v.4h-.06zM.2.56h.06v.4H.2z"/></g></svg>':''}
     <div><div class="label" style="color:#5c5648">임무 ${S.mission} · ${T.name}</div><h2>${verdict} · ${T.grade}</h2></div></div>
-    <dl><dt>기본 점수</dt><dd>${b}</dd><dt>효력사 ${S.ffeUsed}발 (기준 ${T.par}발)</dt><dd>−${pa}</dd><dt>소요 시간 ${sec}초</dt><dd>−${pt}</dd><dt>이탈 ${stray}문</dt><dd>−${ps}</dd><dt>초탄 효력사 파괴</dt><dd>+${first}</dd><dt>조정 사격 명중</dt><dd>+${hitB}</dd>
+    <dl><dt>기본 점수</dt><dd>${b}</dd><dt>효력사 ${S.ffeUsed}발 (기준 ${T.par}발)</dt><dd>−${pa}</dd><dt>소요 시간 ${sec}초</dt><dd>−${pt}</dd><dt>이탈 ${stray}문</dt><dd>−${ps}</dd><dt>조정 사격 명중</dt><dd>+${hitB}</dd>
     <dt style="border-top:2px solid #2a2822;padding-top:4px">임무 점수</dt><dd style="border-top:2px solid #2a2822;padding-top:4px">${sc}</dd></dl>
     <small>${why}${stray?`표적에서 200m 넘게 벗어난 포가 ${stray}문이다. 날개포 편각을 확인하라. 2문 이상이면 불합격이다. `:''}남은 방열 오차: ${lay}. 이 표적에 맞는 사향속은 ${best}이다.${T.rookie?' 신병 관측병의 좌표는 100m 단위였다.':''}</small>
     <div class="row"><button class="btn" type="button" id="resMap" style="flex:1">도판 확인</button><button class="btn go" type="button" id="resNext" style="flex:1.4">${over?'탄약 소진 · 결산':S.mission%3===0?'진지 변환':'다음 임무'}</button></div>`;
