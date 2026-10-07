@@ -102,8 +102,10 @@ select.btn{padding-right:6px}
 #tblwrap{flex:1;min-height:200px;overflow-y:auto;background:var(--paper);color:var(--ink);border-radius:2px;box-shadow:inset 0 0 30px #7a6a4055}
 #tbl{width:100%;border-collapse:collapse;font-family:var(--f-mono);font-size:14px;font-variant-numeric:tabular-nums}
 #tbl th{position:sticky;top:0;background:#c4b892;font-family:var(--f-body);font-size:11px;letter-spacing:.08em;padding:7px 8px;text-align:right;border-bottom:2px solid var(--ink)}
-#tbl td{padding:4px 8px;text-align:right;border-bottom:1px solid #2a282222}
-#tbl tr:nth-child(4n) td{border-bottom:1px solid #2a282277}
+#tbl{font-size:13px}
+#tbl th{padding-inline:5px;white-space:nowrap}
+#tbl td{padding:4px 6px;text-align:right;border-bottom:1px solid #2a282222}
+#tbl tr:nth-child(4n+1) td{border-bottom:1px solid #2a282277}
 #tbl td:nth-child(2){font-weight:600}
 #tbl tbody tr{cursor:pointer}
 #tbl tr.sel td{background:#b9a56e}
@@ -232,7 +234,7 @@ select.btn{padding-right:6px}
       <div class="row"><span class="label">장약</span><div class="seg" id="tblCh"></div></div>
       <p class="hint" id="tblBand" style="margin-top:6px"></p>
     </div>
-    <div id="tblwrap"><table id="tbl"><thead><tr><th>사거리 m</th><th>사각 밀</th><th>비행시간 초</th></tr></thead><tbody></tbody></table></div>
+    <div id="tblwrap"><table id="tbl"><thead><tr><th>사거리 m</th><th>사각 밀</th><th>비행 초</th><th>공산 사거리</th><th>공산 편의</th></tr></thead><tbody></tbody></table></div>
   </section>
 
   <section class="station" id="st-guns" hidden>
@@ -271,14 +273,17 @@ select.btn{padding-right:6px}
       <div class="row" id="attRow" style="margin-bottom:7px" hidden><span class="label">자세 밀</span><input class="num" id="iAtt" inputmode="numeric" value="" placeholder="자세" aria-label="표적 자세"></div>
       <div class="row" style="margin-bottom:7px"><span class="label">사격</span><div class="seg" id="segMode">
         <button class="btn on" type="button" data-v="adj">조정 1발 <span id="adjN">0/3</span></button><button class="btn" type="button" data-v="ffe">효력사</button></div></div>
+      <div id="ffeBox" hidden>
       <div class="row" style="margin-bottom:7px"><span class="label">사격포</span><div class="seg" id="segGuns">
         <button class="btn on" type="button" data-g="0">1</button><button class="btn on" type="button" data-g="1">2</button><button class="btn on" type="button" data-g="2">3</button><button class="btn on" type="button" data-g="3">4</button></div></div>
       <div class="row" style="margin-bottom:7px"><span class="label">방법</span><div class="seg" id="segMeth">
-        <button class="btn on" type="button" data-v="salvo">제사</button><button class="btn" type="button" data-v="right">우익차</button><button class="btn" type="button" data-v="left">좌익차</button><button class="btn" type="button" data-v="cont">연속</button></div></div>
+        <button class="btn on" type="button" data-v="right">익차사</button><button class="btn" type="button" data-v="cont">연속사</button></div></div>
       <div class="row" style="margin-bottom:7px"><span class="label">포당 발수</span>
-        <button class="btn" type="button" data-inc="rounds,-1">−</button><input class="num sm" id="iRounds" inputmode="numeric" value="1" aria-label="포당 발수">
+        <button class="btn" type="button" data-inc="rounds,-1">−</button><input class="num sm" id="iRounds" inputmode="numeric" value="1" aria-label="포당 발수" style="flex:0 0 56px">
         <button class="btn" type="button" data-inc="rounds,1">+</button>
-        <button class="btn go" type="button" id="endBtn" hidden style="margin-left:auto">사격 끝 보고</button></div>
+        <output id="totR" style="font-family:var(--f-mono);font-weight:600;color:var(--amber);white-space:nowrap"></output>
+        <button class="btn go" type="button" id="endBtn" hidden style="margin-left:auto">사격 끝</button></div>
+      </div>
       <p class="hint" id="ammoLine" style="margin-bottom:6px;font-family:var(--f-mono);font-size:11.5px"></p>
       <p class="hint" id="cmdInfo" style="margin-bottom:8px"></p>
       <p id="fireMsg" role="status"></p>
@@ -297,10 +302,10 @@ select.btn{padding-right:6px}
       <li><b>판독</b> 도판이 기준포(2번포)에서 핀까지의 방위각, 편각, 도상사거리, 핀 표고를 보여준다. 편각 = 2800 + (방열 방위각 − 표적 방위각). 표적이 오른쪽이면 줄고 왼쪽이면 는다.</li>
       <li><b>날개포 편각</b> 조정 사격은 기준포 편각만 쓴다. 효력사 전에 사향속을 정하고, 도판의 판독 포를 1·3·4번으로 바꿔 각 포의 편각을 읽어 사격명령에 넣는다. 평행사향속은 전 포가 기준 편각과 같다. 사향속은 기준포 탄착점을 기준으로 펼쳐진다. 포별 사거리 차이는 포반이 맞춘다.</li>
       <li><b>보조사거리</b> 도상사거리 + (핀 표고 − 진지 표고) ÷ 2. 표적이 높으면 늘고 낮으면 준다.</li>
-      <li><b>사표</b> 보조사거리가 들어가는 장약을 고르고 사각을 읽는다. 사거리 끝단보다 중간대가 정확하다.</li>
+      <li><b>사표</b> 보조사거리가 들어가는 장약을 고르고 사각을 읽는다. 사표는 25m 단위다. 공산오차는 같은 제원으로 쏜 탄의 절반이 그 거리 안에 떨어진다는 뜻이고, 비행시간이 길수록 커진다. 한 발로 안 잡히는 표적에 관측소가 발수를 늘려 부르는 이유다.</li>
       <li><b>사향속</b> 점표적은 집중, 지역표적은 평행, 포목선에 가로놓인 선표적은 개방, 비스듬한 선표적은 특수에 자세를 넣는다.</li>
       <li><b>신관</b> 순발은 노출 표적에 살상범위 40m. 근접은 공중에서 터져 노출 표적 55m, 무개 참호 40m지만 전체 80발뿐이고 탄착 관측이 흐려진다. 지연은 유개 엄폐호를 뚫는다. 순발과 근접은 엄폐호에 듣지 않는다.</li>
-      <li><b>사격방법</b> 포마다 60발, 근접신관은 전체 80발이고 보급은 없다. 사격포에서 쏠 포만 남기면 지명사다. 제사는 지명한 포가 동시에, 우익차사와 좌익차사는 한쪽 끝 포부터 차례로, 연속사는 포마다 정한 발수를 쉬지 않고 쏜다. 단단하거나 밀집한 표적은 한 곳에 여러 발이 필요하다. 사격방법은 관측소, 화력지휘소, 포진 순으로 통제된다. 관측소가 사격요청에서 부른 사격포, 방법, 발수를 그대로 사격명령에 넣어야 포진이 쏜다. 지명사, 익차사, 연속사는 한 발씩 떨어지고, 도중에 표적이 파괴되면 관측소가 사격을 중지시켜 남은 탄은 쏘지 않는다. 연속사는 발수 없이 관측소가 중지할 때까지 쏜다(포당 최대 6발).</li>
+      <li><b>사격방법</b> 효력사의 사격포, 방법, 발수는 관측소, 화력지휘소, 포진 순으로 통제된다. 관측소가 부르는 발수는 소대 발수다. 화력지휘소는 사격포 수로 나눠 포당 발수를 내리고, 총 발수가 소대 발수와 맞아야 포진이 쏜다. 익차사는 1번포부터 4번포까지 차례로, 연속사는 포마다 쉬지 않고 쏜다. 사격포에서 2번포만 남기면 지명사다. 도중에 표적이 파괴되면 관측소가 사격을 중지시켜 남은 탄은 쏘지 않는다. 포마다 60발, 근접신관은 전체 80발이고 보급은 없다. 한 번에 쏠 수 있는 최대 발수는 소대 52발(포당 13발)이다. 조정 사격은 발수에 넣지 않는다.</li>
       <li><b>사격</b> 조정 사격은 기준포로 한 발씩, 최대 3발이다. 한 발이라도 표적 40m 안에 떨어지면 명중이고 곧바로 효력사로 넘어간다. 3발이 모두 빗나가면 마지막 수정을 반영해 효력사만 쏜다. 효력사는 표적이 파괴되면 끝나고, 아니면 수정해서 세 번까지 반복하거나 사격 끝을 보고한다. 관측소는 사격요청 때 OTAZ(관측소에서 표적을 보는 방위각)를 부르고, 수정은 그 관측선 기준으로 온다. 더하기는 관측소에서 멀어지는 쪽이다. 도판에 OTAZ를 넣고 관측 수정으로 핀을 옮기고 제원을 다시 뽑는다.</li>
     </ol>
     <small>지형은 생성한 가상 지형이고 좌표는 MGRS 형식만 따른다. 사표는 게임용 탄도 모형이며 장약은 6호까지, 최대사거리 6,250m, 살상범위 40m로 맞췄다.</small>
@@ -320,6 +325,7 @@ const vec=m=>[Math.sin(m*MIL),Math.cos(m*MIL)];
 const azOf=(a,b)=>norm(Math.atan2(b.x-a.x,b.y-a.y)/MIL), dist=(a,b)=>Math.hypot(b.x-a.x,b.y-a.y);
 const tblRange=(c,mil)=>RMAX[c-1]*Math.sin(2*mil*MIL);
 const tblElev=(c,R)=>{const r=R/RMAX[c-1];return (r>1||r<Math.sin(2*E_MAX*MIL))?null:(Math.PI-Math.asin(r))/2/MIL};
+const pe=(c,mil)=>{const t=2*Math.sqrt(RMAX[c-1]*G)*Math.sin(mil*MIL)/G;return{r:.45*t,d:.28*t}};
 const tof=(c,mil)=>2*Math.sqrt(RMAX[c-1]*G)*Math.sin(mil*MIL)/G;
 const grid=(p,d)=>{const k=d===8?10:100,w=d/2;return `${ZONE} ${pad(Math.floor(p.x/k)%10**w,w)} ${pad(Math.floor(p.y/k)%10**w,w)}`};
 
@@ -354,7 +360,7 @@ const BASE=document.createElement('canvas'), BP=1000; BASE.width=BASE.height=BP;
 
 /* ---------- state ---------- */
 const S={mission:0,total:0,phase:'lay',M:0,guns:[],layDone:false,target:null,pin:null,ammo:14,used:0,t0:0,tEnd:0,
-  tblC:1,marks:[],shots:[],bursts:[],pings:[],symAz:null,raf:0,flashT:0,reveal:false,step:10,rg:1,sheaf:'par',mode:'adj',fuze:'pd',vt:80,fg:[true,true,true,true],meth:'salvo',pass:0,ffeUsed:0,station:'radio',history:[]};
+  tblC:1,marks:[],shots:[],bursts:[],pings:[],symAz:null,raf:0,flashT:0,reveal:false,step:10,rg:1,sheaf:'par',mode:'adj',fuze:'pd',vt:80,fg:[true,true,true,true],meth:'right',pass:0,ffeUsed:0,station:'radio',history:[]};
 const DEF0=2800,DF=['#iD0','#iAz','#iD2','#iD3'],defOf=az=>norm(DEF0+S.M-az),azFromDef=d=>norm(S.M+DEF0-d);
 function aimPt(i){const B=base(),P=S.pin,g=S.guns[i],u=vec(azOf(B,P)+1600),o=(1-i)*80;if(S.sheaf==='conv')return P;if(S.sheaf==='open')return{x:P.x+u[0]*o,y:P.y+u[1]*o};
   if(S.sheaf==='spec'&&$('#iAtt').value.trim()!==''){let a=vec(norm(val('#iAtt')));if(a[0]*u[0]+a[1]*u[1]<0)a=[-a[0],-a[1]];return{x:P.x+a[0]*o,y:P.y+a[1]*o}}return{x:P.x+g.x-B.x,y:P.y+g.y-B.y}}
@@ -395,20 +401,20 @@ function occupy(){S.phase='lay';S.layDone=false;
 function newMission(){S.mission++;S.phase='plan';$('#fireMsg').textContent='';S.used=0;S.ffeUsed=0;S.marks=[];S.pin=null;S.reveal=false;S.defOk=null;S.t0=performance.now();S.tEnd=0;
   const first=['truck','inf','trench'][S.mission-1],D=first?TG.find(t=>t.k===first):TG[Math.random()*TG.length|0],type=D.type;let c,gAz;
   for(let k=0;k<300;k++){gAz=norm(S.M+rnd(-600,600));const d=S.mission===1?rnd(2000,3400):rnd(1500,6000),v=vec(gAz);
-    c={x:base().x+v[0]*d,y:base().y+v[1]*d};if(c.x>40500&&c.x<47500&&c.y>10500&&c.y<17500)break}
+    c={x:base().x+v[0]*d,y:base().y+v[1]*d};const ax=d+(alt(c.x,c.y)-gunAlt())/2;if(c.x>40500&&c.x<47500&&c.y>10500&&c.y<17500&&ax>500&&ax<6000)break}
   gAz=azOf(base(),c);let att=0,els=[];const g=vec(gAz),u=vec(gAz+1600),name=D.name[Math.random()*D.name.length|0];let desc=D.desc;
   if(type==='point')els=[{x:c.x,y:c.y}];
   else if(type==='cluster')for(const l of[-30,0,30])els.push({x:c.x+u[0]*l,y:c.y+u[1]*l});
   else if(type==='area'){for(const l of[-90,-45,0,45])for(const dp of[-12,12])els.push({x:c.x+u[0]*l+g[0]*dp,y:c.y+u[1]*l+g[1]*dp})}
   else{att=type==='line'?gAz+1600:gAz+1600+(Math.random()<.5?-1:1)*rnd(500,900);att=Math.round(norm(att)%3200/10)*10;let a=vec(att);if(a[0]*u[0]+a[1]*u[1]<0)a=[-a[0],-a[1]];
     for(let q=-180;q<=100;q+=40)els.push({x:c.x+a[0]*q,y:c.y+a[1]*q});desc+=`, 자세 ${pad(att,4)}`}
-  els.forEach(e=>e.hp=D.hp);const m=D.m==='wing'?(Math.random()<.5?'right':'left'):D.m,par=m==='cont'?12:(m==='named'?1:4)*D.n;
+  els.forEach(e=>e.hp=D.hp);const m=D.m,par=D.n;
   const rookie=S.mission>3&&Math.random()<.5,sg=rookie?45:12,rep={x:c.x+gauss()*sg,y:c.y+gauss()*sg},digits=rookie?6:8;
   let op;for(let k=0;k<300;k++){const v=vec(azOf(c,base())+rnd(-1400,1400)),d=rnd(700,1800);op={x:c.x+v[0]*d,y:c.y+v[1]*d};if(op.x>40300&&op.x<47700&&op.y>10300&&op.y<17700)break}
   const otAz=norm(Math.round(azOf(op,c)/10)*10)%6400;$('#cOT').value='';
   S.target={type,c,els,att,name,rookie,prot:D.prot,hp:D.hp,req:{m,n:D.n},par,op,otAz,adjUsed:0,ffe:0,grade:'무효'};
   $('#iAtt').value='';setDefs(DEF0);$('#endBtn').hidden=true;
-  adjUi();setMode('adj');say(rookie?'관측소(신병)':'관측소',`화력지휘소, 여기는 관측소. 사격임무. 좌표 ${grid(rep,digits)}, OTAZ ${pad(otAz,4)}. ${name}. ${desc}. 사격방법 ${m==='cont'?'연속사':MN[m]+', '+D.n+'발'}. 이상.`);
+  adjUi();setMode('adj');say(rookie?'관측소(신병)':'관측소',`화력지휘소, 여기는 관측소. 사격임무. 좌표 ${grid(rep,digits)}, OTAZ ${pad(otAz,4)}. ${name}. ${desc}. 효력사 ${MN[m]}, ${m==='named'?'':'소대 '}${D.n}발. 이상.`);
   $('#radioHint').textContent='도판에 좌표를 표정하고 제원을 뽑아라.';$('[data-st="board"]').classList.add('alert');updateHud();updateReads();paintGuns();draw()}
 
 /* ---------- lay ---------- */
@@ -432,13 +438,13 @@ $('#layDone').onclick=()=>{if(S.layDone)return;S.layDone=true;snd('click');const
 
 /* ---------- command inputs ---------- */
 const val=id=>parseInt($(id).value,10)||0;
-function cmdInfo(){cmdInfo0();if(S.pin&&S.guns.length)$('#cmdInfo').textContent+=` · 도판 편각 ${pad(defOf(azOf(base(),S.pin)),4)}, 도상사거리 ${Math.round(dist(base(),S.pin)).toLocaleString()}m`;const cc=clamp(val('#iCharge'),1,NC);if(cc!==tblC){tblC=cc;renderTable()}else tblNote()}
+function cmdInfo(){cmdInfo0();$('#totR').textContent='총 '+S.fg.filter(Boolean).length*clamp(val('#iRounds'),1,13)+'발';if(S.pin&&S.guns.length)$('#cmdInfo').textContent+=` · 도판 편각 ${pad(defOf(azOf(base(),S.pin)),4)}, 도상사거리 ${Math.round(dist(base(),S.pin)).toLocaleString()}m`;const cc=clamp(val('#iCharge'),1,NC);if(cc!==tblC){tblC=cc;renderTable()}else tblNote()}
 function cmdInfo0(){const c=clamp(val('#iCharge'),1,NC),e=val('#iElev');
   $('#cmdInfo').textContent=(e<E_MIN||e>E_MAX)?`사각은 ${E_MIN}–${E_MAX}밀 안에서 쓴다.`:`이 제원의 사표 사거리 ${Math.round(tblRange(c,e)).toLocaleString()}m · 비행시간 ${Math.round(tof(c,e))}초`}
 $$('[data-inc]').forEach(b=>b.onclick=()=>{snd('click');const[k,d]=b.dataset.inc.split(',');
   if(k==='charge')$('#iCharge').value=clamp(val('#iCharge')+ +d,1,NC);
   if(k==='elev')$('#iElev').value=clamp(val('#iElev')+ +d,E_MIN,E_MAX);
-  if(k==='rounds')$('#iRounds').value=clamp(val('#iRounds')+ +d,1,6);
+  if(k==='rounds')$('#iRounds').value=clamp(val('#iRounds')+ +d,1,13);
   if(k==='az')$('#iAz').value=pad(norm(val('#iAz')+ +d),4);cmdInfo()});
 ['#iCharge','#iElev','#iAz','#iD0','#iD2','#iD3'].forEach(s=>$(s).oninput=cmdInfo);$('#cOT').oninput=()=>draw();
 $('#defCopy').onclick=()=>{snd('click');setDefs(norm(val('#iAz')));cmdInfo()};
@@ -447,26 +453,26 @@ $('#segRg').onclick=e=>{const b=e.target.closest('button');if(!b)return;snd('cli
 function seg(id,key,after){$(id).onclick=e=>{const b=e.target.closest('button');if(!b)return;snd('click');S[key]=b.dataset.v;
   $$(id+' button').forEach(x=>x.classList.toggle('on',x===b));after&&after()}}
 seg('#segSheaf','sheaf',()=>{$('#attRow').hidden=S.sheaf!=='spec';updateReads()});seg('#segMeth','meth');
-$('#segGuns').onclick=e=>{const b=e.target.closest('button');if(!b)return;snd('click');const i=+b.dataset.g;S.fg[i]=!S.fg[i];b.classList.toggle('on',S.fg[i])};
-const MN={salvo:'제사',right:'우익차사',left:'좌익차사',cont:'연속사',named:'지명사 2번포'};
-const TG=[{k:'truck',type:'point',prot:'open',hp:1,name:['개활지에 정차한 적 보급 트럭'],desc:'점표적, 노출',m:'named',n:2},
- {k:'tent',type:'cluster',prot:'open',hp:1,name:['적 지휘소 천막군'],desc:'소형 지역표적, 노출, 정면 60',m:'salvo',n:1},
- {k:'bunker',type:'point',prot:'hard',hp:3,name:['적 기관총 유개호','적 관측소 벙커'],desc:'점표적, 유개 엄폐, 견고',m:'named',n:5},
- {k:'inf',type:'area',prot:'open',hp:1,name:['개활지에 집결한 적 보병'],desc:'지역표적, 노출, 정면 150',m:'salvo',n:1},
- {k:'camp',type:'area',prot:'open',hp:2,name:['적 숙영지'],desc:'지역표적, 노출, 정면 150, 병력 밀집',m:'cont',n:2},
- {k:'trench',type:'line',prot:'trench',hp:1,name:['적 참호선'],desc:'선표적, 무개 참호, 길이 280',m:'salvo',n:1},
- {k:'convoy',type:'oblique',prot:'open',hp:1,name:['도로상의 적 차량 종대'],desc:'선표적, 노출, 길이 280',m:'wing',n:1},
- {k:'mortar',type:'cluster',prot:'trench',hp:2,name:['적 박격포 진지'],desc:'소형 지역표적, 포상 엄폐, 정면 60',m:'cont',n:2}];
-seg('#segMode','mode',()=>{if(S.target&&S.target.adjLock)setMode('ffe')});seg('#segFuze','fuze');
+$('#segGuns').onclick=e=>{const b=e.target.closest('button');if(!b)return;snd('click');const i=+b.dataset.g;S.fg[i]=!S.fg[i];b.classList.toggle('on',S.fg[i]);cmdInfo()};$('#iRounds').oninput=()=>cmdInfo();
+const MN={salvo:'제사',right:'익차사',cont:'연속사',named:'지명사 2번포'};
+const TG=[{k:'truck',type:'point',prot:'open',hp:1,name:['개활지에 정차한 적 보급 트럭'],desc:'점표적, 노출',m:'named',n:3},
+ {k:'tent',type:'cluster',prot:'open',hp:1,name:['적 지휘소 천막군'],desc:'소형 지역표적, 노출, 정면 60',m:'right',n:4},
+ {k:'bunker',type:'point',prot:'hard',hp:3,name:['적 기관총 유개호','적 관측소 벙커'],desc:'점표적, 유개 엄폐, 견고',m:'named',n:6},
+ {k:'inf',type:'area',prot:'open',hp:1,name:['개활지에 집결한 적 보병'],desc:'지역표적, 노출, 정면 150',m:'right',n:8},
+ {k:'camp',type:'area',prot:'open',hp:2,name:['적 숙영지'],desc:'지역표적, 노출, 정면 150, 병력 밀집',m:'cont',n:12},
+ {k:'trench',type:'line',prot:'trench',hp:1,name:['적 참호선'],desc:'선표적, 무개 참호, 길이 280',m:'right',n:8},
+ {k:'convoy',type:'oblique',prot:'open',hp:1,name:['도로상의 적 차량 종대'],desc:'선표적, 노출, 길이 280',m:'right',n:8},
+ {k:'mortar',type:'cluster',prot:'trench',hp:2,name:['적 박격포 진지'],desc:'소형 지역표적, 포상 엄폐, 정면 60',m:'cont',n:12}];
+seg('#segMode','mode',()=>setMode(S.target&&S.target.adjLock?'ffe':S.mode));seg('#segFuze','fuze');
 const FZ={pd:'순발',vt:'근접',dly:'지연'},KRT={pd:{open:KR,trench:15,hard:0},vt:{open:55,trench:KR,hard:0},dly:{open:15,trench:20,hard:25}};
 function warn(m){$('#fireMsg').textContent=m;if(m){snd('click');$('#ticker').textContent='포반장 ▸ '+m}}
 
 /* ---------- firing table ---------- */
-function tblNote(){const cc=clamp(val('#iCharge'),1,NC),lo=Math.ceil(RMAX[tblC-1]*Math.sin(2*E_MAX*MIL)/50)*50;$('#tblBand').textContent=`장약 ${tblC} · 사거리 ${lo.toLocaleString()}–${RMAX[tblC-1].toLocaleString()}m · 줄을 누르면 장약과 사각이 사격명령에 들어간다.`+(cc!==tblC?` 지금 사격명령은 장약 ${cc}이다.`:'');$('#tblBand').style.color=cc!==tblC?'var(--amber)':''}
+function tblNote(){const cc=clamp(val('#iCharge'),1,NC),lo=Math.ceil(RMAX[tblC-1]*Math.sin(2*E_MAX*MIL)/25)*25;$('#tblBand').textContent=`장약 ${tblC} · 사거리 ${lo.toLocaleString()}–${RMAX[tblC-1].toLocaleString()}m · 줄을 누르면 장약과 사각이 사격명령에 들어간다.`+(cc!==tblC?` 지금 사격명령은 장약 ${cc}이다.`:'');$('#tblBand').style.color=cc!==tblC?'var(--amber)':''}
 function renderTable(){$('#tblCh').innerHTML=RMAX.map((_,i)=>`<button class="btn${i+1===tblC?' on':''}" type="button" data-c="${i+1}">${i+1}</button>`).join('');
-  const lo=Math.ceil(RMAX[tblC-1]*Math.sin(2*E_MAX*MIL)/50)*50,hi=RMAX[tblC-1];
+  const lo=Math.ceil(RMAX[tblC-1]*Math.sin(2*E_MAX*MIL)/25)*25,hi=RMAX[tblC-1];
   tblNote();let h='';
-  for(let R=lo;R<=hi;R+=50){const e=tblElev(tblC,R);h+=`<tr data-e="${Math.round(e)}"><td>${R.toLocaleString()}</td><td>${Math.round(e)}</td><td>${tof(tblC,e).toFixed(1)}</td></tr>`}
+  for(let R=lo;R<=hi;R+=25){const e=tblElev(tblC,R),q=pe(tblC,e);h+=`<tr data-e="${Math.round(e)}"><td>${R.toLocaleString()}</td><td>${Math.round(e)}</td><td>${tof(tblC,e).toFixed(1)}</td><td>${Math.round(q.r)}</td><td>${Math.round(q.d)}</td></tr>`}
   $('#tbl tbody').innerHTML=h;$('#tblwrap').scrollTop=0}
 $('#tbl tbody').onclick=e=>{const tr=e.target.closest('tr');if(!tr)return;snd('click');$('#iCharge').value=tblC;$('#iElev').value=tr.dataset.e;$$('#tbl tr.sel').forEach(x=>x.classList.remove('sel'));tr.classList.add('sel');cmdInfo();$('#ticker').textContent=`사격명령에 입력 ▸ 장약 ${tblC}, 사각 ${tr.dataset.e}`};
 $('#tblCh').onclick=e=>{const b=e.target.closest('button');if(!b)return;snd('click');tblC=+b.dataset.c;renderTable()};
@@ -553,23 +559,23 @@ function fire(){if(!S.layDone)return warn('먼저 네 문을 방열하고 포위
   if(!S.pin)return warn('표적이 도판에 없다. 도판을 눌러 먼저 표정하라.');
   if(E<E_MIN||E>E_MAX)return warn(`사각 ${E}밀은 쏠 수 없다. ${E_MIN}–${E_MAX}밀로 다시 내려라.`);
   if(ffe&&S.sheaf==='spec'&&$('#iAtt').value.trim()==='')return warn('특수사향속은 관측소가 부른 표적 자세를 넣어야 한다.');if(!ffe&&T.adjLock)return warn('조정 사격은 끝났다. 효력사만 쏠 수 있다.');
-  let sel=ffe?[0,1,2,3].filter(i=>S.fg[i]):[1];let nr=ffe?clamp(val('#iRounds'),1,6):1;if(!sel.length)return warn('사격할 포를 하나 이상 지명하라.');
-  if(ffe){const q=T.req,ok=q.m==='named'?(sel.length===1&&sel[0]===1&&nr===q.n):q.m==='cont'?(sel.length===4&&S.meth==='cont'):(sel.length===4&&S.meth===q.m&&nr===q.n);if(!ok)return warn('관측소가 통제한 사격방법과 다르다. 무전에서 사격포, 방법, 발수를 확인하라.');if(q.m==='cont'){nr=Math.min(6,...sel.map(i=>S.guns[i].ammo));if(nr<1)return warn('잔탄이 없다.')}}
-  for(const i of sel)if(S.guns[i].ammo<nr)return warn(`${i+1}번포 잔탄이 ${S.guns[i].ammo}발뿐이다.`);
+  let sel=ffe?[0,1,2,3].filter(i=>S.fg[i]):[1];let nr=ffe?clamp(val('#iRounds'),1,13):1;if(!sel.length)return warn('사격할 포를 하나 이상 지명하라.');
+  if(ffe){const q=T.req,ok=(q.m==='named'?(sel.length===1&&sel[0]===1):(sel.length===4&&S.meth===q.m))&&sel.length*nr===q.n;if(!ok)return warn('관측소가 통제한 효력사와 다르다. 무전에서 사격포, 방법, 소대 발수를 확인하라.')}
+  if(ffe)for(const i of sel)if(S.guns[i].ammo<nr)return warn(`${i+1}번포 잔탄이 ${S.guns[i].ammo}발뿐이다.`);
   if(ffe){const bd=norm(val('#iAz')),off=sel.filter(i=>i!==1&&Math.abs(((norm(val(DF[i]))-bd+9600)%6400)-3200)>150).map(i=>i+1),key=DF.map(d=>val(d)).join();if(off.length&&S.defOk!==key){S.defOk=key;return warn(`${off.join('·')}번포 편각이 기준포와 150밀 넘게 다르다. 맞다면 한 번 더 격발하라.`)}}
-  if(S.fuze==='vt'&&S.vt<sel.length*nr)return warn(`근접신관이 ${S.vt}발뿐이다. 다른 신관을 골라라.`);warn('');
-  const Rt=tblRange(c,E),bR=dist(base(),S.pin),fast=window.__fdc.fast,now=performance.now(),dur=fast?20:clamp(tof(c,E)*1000/6,2500,6000),meth=!ffe?'salvo':T.req.m==='named'?'named':S.meth;S.shots=[];
+  if(ffe&&S.fuze==='vt'&&S.vt<sel.length*nr)return warn(`근접신관이 ${S.vt}발뿐이다. 다른 신관을 골라라.`);warn('');
+  const Rt=tblRange(c,E),PE=pe(c,E),bR=dist(base(),S.pin),fast=window.__fdc.fast,now=performance.now(),dur=fast?20:clamp(tof(c,E)*1000/6,2500,6000),meth=!ffe?'salvo':T.req.m==='named'?'named':S.meth;S.shots=[];
   if(meth==='left')sel=sel.slice().reverse();
   sel.forEach((i,pos)=>{const g=S.guns[i],dR=ffe?dist(g,aimPt(i))-bR:0,Ai=azFromDef(norm(val(ffe?DF[i]:'#iAz'))),d=vec(Ai+g.err),R=Rt+dR,ga=alt(g.x,g.y),r=vec(Ai+g.err+1600);
     let L0=R;for(let n=0;n<5;n++)L0=R-(alt(g.x+d[0]*L0,g.y+d[1]*L0)-ga)/2;
-    for(let k=0;k<nr;k++){const L=L0+gauss()*12,w=gauss()*7,gap=meth==='salvo'?(k*1100+pos*70)/(fast?50:1):meth==='cont'||meth==='named'?k*dur*.55+pos*dur*.05:(k*sel.length+pos)*(dur+(fast?5:350));
+    for(let k=0;k<nr;k++){const L=L0+gauss()*PE.r/.6745,w=gauss()*PE.d/.6745,gap=meth==='salvo'?(k*1100+pos*70)/(fast?50:1):meth==='cont'||meth==='named'?k*dur*.55+pos*dur*.05:(k*sel.length+pos)*(dur+(fast?5:350));
       S.shots.push({gun:i,from:{x:g.x,y:g.y},to:{x:g.x+d[0]*L+r[0]*w,y:g.y+d[1]*L+r[1]*w},t0:now+gap,dur,done:false})}
-    g.ammo-=nr});
-  const cnt=sel.length*nr;S.used+=cnt;if(S.fuze==='vt'){S.vt-=cnt}
+    if(ffe)g.ammo-=nr});
+  const cnt=sel.length*nr;if(ffe){S.used+=cnt;if(S.fuze==='vt')S.vt-=cnt}
   if(ffe){T.ffe++;S.ffeUsed+=cnt;}else T.adjUsed++;
   S.flashT=now;S.phase='flight';S.flight={ffe,tof:tof(c,E),fuze:S.fuze,sel,meth,kr:KRT[S.fuze][T.prot]};
-  say('화력지휘소',`${ffe?'효력사':'조정 사격'}. 장약 ${c}, 사각 ${E}, 편각 ${ffe?sel.slice().sort().map(i=>pad(norm(val(DF[i])),4)).join('/'):pad(A,4)}, 신관 ${FZ[S.fuze]}${ffe?', '+{par:'평행',conv:'집중',open:'개방',spec:'특수'}[S.sheaf]+'사향속, '+(meth==='named'?'지명사 2번포 '+nr+'발':meth==='cont'?'연속사':MN[meth]+' '+nr+'발'):''}. 쏴.`,true);
-  if(ffe)say('포진',meth==='cont'?'연속사 수신. 관측소 중지 시까지 발사.':meth==='named'?`지명사 수신. 2번포 ${nr}발 발사.`:`${MN[meth]} ${nr}발 수신. ${meth==='right'?'1번포부터 ':meth==='left'?'4번포부터 ':''}발사.`);
+  say('화력지휘소',`${ffe?'효력사':'조정 사격'}. 장약 ${c}, 사각 ${E}, 편각 ${ffe?sel.slice().sort().map(i=>pad(norm(val(DF[i])),4)).join('/'):pad(A,4)}, 신관 ${FZ[S.fuze]}${ffe?', '+{par:'평행',conv:'집중',open:'개방',spec:'특수'}[S.sheaf]+'사향속, '+(meth==='named'?'지명사 2번포 '+nr+'발':MN[meth]+' 포당 '+nr+'발, 총 '+sel.length*nr+'발'):''}. 쏴.`,true);
+  if(ffe)say('포진',meth==='named'?`지명사 수신. 2번포 ${nr}발 발사.`:meth==='cont'?`연속사 포당 ${nr}발 수신. 발사.`:`익차사 포당 ${nr}발 수신. 1번포부터 발사.`);
   snd('thump');buzz(40);updateHud();paintGuns();go('board');
   const all=S.shots.map(s=>s.to),mx=all.reduce((s,q)=>s+q.x,0)/all.length,my=all.reduce((s,q)=>s+q.y,0)/all.length;
   if(Math.abs(sx(mx)-view.w/2)>view.w*.42||Math.abs(sy(my)-view.w/2)>view.w*.42){view.cx=mx;view.cy=my}
@@ -584,7 +590,7 @@ function loop(){const now=performance.now();let live=false;
   const f=S.shots[0],left=f?Math.max(0,1-(now-f.t0)/f.dur)*S.flight.tof:0;$('#eta').hidden=!live;if(live)$('#eta').textContent=`탄착까지 ${Math.ceil(left)}초`;
   S.bursts=S.bursts.filter(b=>now-b.t<700);draw();
   if(live||S.bursts.length)requestAnimationFrame(loop);else if(S.phase==='flight'){S.phase='wait';setTimeout(resolve,reduce?0:500)}}
-function setMode(v){S.mode=v;$$('#segMode button').forEach(x=>x.classList.toggle('on',x.dataset.v===v))}
+function setMode(v){S.mode=v;$('#ffeBox').hidden=v!=='ffe';$$('#segMode button').forEach(x=>x.classList.toggle('on',x.dataset.v===v))}
 function adjUi(){const T=S.target,n=T?T.adjUsed:0,lock=!!(T&&T.adjLock);$('#adjN').textContent=`${n}/3`;$('#segMode [data-v="adj"]').disabled=lock;if(lock)setMode('ffe')}
 function resolve(){const T=S.target,hits=S.shots.filter(s=>!s.cancel).map(s=>s.to),fz=S.flight.fuze,kr=KRT[fz][T.prot];
   const gAz=T.otAz,g=vec(gAz),u=vec(gAz+1600),mx=hits.reduce((s,q)=>s+q.x,0)/hits.length-T.c.x,my=hits.reduce((s,q)=>s+q.y,0)/hits.length-T.c.y;
