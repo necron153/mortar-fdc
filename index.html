@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#111315">
+<title>박격포 사격지휘소</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans+KR:wght@400;500;700&display=swap">
+<style>
+/* Layout: one-screen bunker console. Stamped header plate, four station keys, one working station, radio ticker at the foot. */
+:root{
+  --bg:#111315; --panel:#22272a; --panel-hi:#2d3438; --edge:#40484d; --well:#0b0d0e;
+  --olive:#474f3b; --brass:#b4924c; --amber:#f0a73a; --paper:#d8cdb0; --ink:#2a2822;
+  --red:#b3362c; --green:#7ccf68; --fg:#d9d4c5; --mute:#918e82;
+  --f-display:"Black Han Sans","IBM Plex Sans KR",sans-serif;
+  --f-body:"IBM Plex Sans KR",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:14px;line-height:1.45;
+  background-image:radial-gradient(120% 60% at 50% 0%,#1b1f22 0%,var(--bg) 70%);overscroll-behavior:none}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+#app{position:relative;height:100%;max-width:520px;margin:0 auto;padding-inline:16px;padding-block:8px;display:flex;flex-direction:column;gap:8px}
+
+/* header plate */
+.plate{display:flex;flex-wrap:wrap;align-items:center;gap:6px 5px;padding:8px 12px;background:linear-gradient(#333a3e,#262b2e);
+  border:1px solid var(--edge);border-radius:3px;box-shadow:inset 0 1px 0 #ffffff14,0 2px 0 #000}
+.plate h1{margin-right:auto!important;font-family:var(--f-display);font-weight:400;font-size:clamp(14px,4.4vw,18px);letter-spacing:0;margin:0;color:var(--paper);white-space:nowrap}
+.plate .stats{order:3;flex:1 0 100%;display:grid;grid-template-columns:repeat(4,1fr);gap:6px;border-top:1px solid var(--edge);padding-top:6px;font-family:var(--f-mono);font-size:12px;color:var(--amber);font-variant-numeric:tabular-nums}
+.plate .stats div{display:flex;align-items:baseline;gap:6px;white-space:nowrap}
+.plate .stats b{font-family:var(--f-body);font-weight:500;font-size:9px;letter-spacing:.12em;color:var(--mute)}
+.ghost[aria-pressed="false"]{opacity:.45;text-decoration:line-through}
+.ghost{margin-left:0;padding:3px 6px;font-size:11.5px!important;white-space:nowrap;background:none;border:1px solid var(--edge);border-radius:3px;padding:4px 8px;font-size:12px;color:var(--paper)}
+
+/* station keys */
+.keys{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.key{position:relative;padding:9px 4px 7px;background:linear-gradient(#3a4145,#272c2f);border:1px solid var(--edge);border-bottom-width:4px;
+  border-radius:3px;font-family:var(--f-display);font-size:15px;letter-spacing:.08em;color:var(--mute)}
+.key[aria-selected="true"]{border-bottom-width:1px;margin-top:3px;background:linear-gradient(#262b2e,#30373b);color:var(--amber)}
+.key i{position:absolute;top:5px;right:6px;width:7px;height:7px;border-radius:50%;background:#3a2f1c;box-shadow:inset 0 0 2px #000}
+.key.alert i{background:var(--amber);box-shadow:0 0 8px var(--amber);animation:blink 1s steps(2) infinite}
+@keyframes blink{50%{opacity:.25}}
+.panel{position:relative;background-image:repeating-linear-gradient(90deg,#ffffff05 0 1px,#0000 1px 3px),linear-gradient(var(--panel-hi),var(--panel))}
+.panel::before,.panel::after{content:'';position:absolute;top:5px;width:5px;height:5px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#8a9196,#2b3033 70%);box-shadow:0 1px 0 #ffffff14}
+.panel::before{left:5px}.panel::after{right:5px}
+.panel.olive{background-image:repeating-linear-gradient(90deg,#ffffff06 0 1px,#0000 1px 3px),linear-gradient(#525b45,var(--olive))}
+.plate{background-image:repeating-linear-gradient(90deg,#ffffff06 0 1px,#0000 1px 2px),linear-gradient(#3a4246,#24292c)}
+.key{transition:color .15s,box-shadow .15s}.key[aria-selected="true"]{box-shadow:inset 0 0 14px #f0a73a22,0 0 0 1px #f0a73a33;text-shadow:0 0 10px #f0a73a88}
+.btn{transition:filter .12s,transform .06s}.btn:hover{filter:brightness(1.12)}.btn.on{box-shadow:inset 0 0 10px #f0a73a22;text-shadow:0 0 8px #f0a73a66}
+.ticker{background-image:repeating-linear-gradient(0deg,#0000004d 0 1px,#0000 1px 3px);text-shadow:0 0 6px #f0a73a99;letter-spacing:.02em}
+#log p.typing>span:last-child::after{content:'▌';margin-left:1px;color:#7a3a2a;animation:blink .8s steps(2) infinite}
+.mapwrap{overflow:hidden;flex:none}.mapwrap.flash::after{content:'';position:absolute;inset:0;background:radial-gradient(circle,#fff6d8aa,#ffb04a33 50%,#0000 75%);pointer-events:none;animation:mflash .35s ease-out forwards}
+@keyframes mflash{from{opacity:1}to{opacity:0}}
+#lever{background-image:repeating-linear-gradient(90deg,#0000 0 13px,#ffffff0d 13px 14px),radial-gradient(120% 100% at 50% 0,#1c2124,var(--well))}
+#knob{background:linear-gradient(#e2584a,var(--red) 50%,#6e1c16);box-shadow:0 3px 8px #000,inset 0 1px 0 #ffffff66,inset 0 -2px 4px #0006}
+.over:not([hidden]) .card{animation:cardIn .32s cubic-bezier(.2,.9,.3,1.2)}
+@keyframes cardIn{from{opacity:0;transform:translateY(14px) scale(.94) rotate(-.8deg)}}
+.card .stamp svg{animation:stampIn .45s .15s cubic-bezier(.3,1.6,.5,1) both}
+@keyframes stampIn{from{opacity:0;transform:scale(2.6) rotate(-18deg)}}
+.card{background-image:radial-gradient(120% 90% at 30% 10%,#e4dabf,var(--paper) 60%,#cfc3a3)}
+#log{background-image:repeating-linear-gradient(#0000 0 25px,#2a282214 25px 26px),radial-gradient(130% 100% at 50% 0,#e2d8bd,var(--paper) 70%,#cbbf9e)}
+
+.station{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding-bottom:4px}
+.panel{background:linear-gradient(var(--panel-hi),var(--panel));border:1px solid var(--edge);border-radius:3px;padding:10px 12px;
+  box-shadow:inset 0 1px 0 #ffffff10}
+.panel.olive{background:linear-gradient(#525b45,var(--olive))}
+.label{font-size:10px;font-weight:700;letter-spacing:.14em;color:var(--mute);text-transform:uppercase}
+.olive .label{color:#c9c7a8}
+
+/* radio */
+#log{flex:1;min-height:180px;background:var(--paper);color:var(--ink);border-radius:2px;padding:12px 14px;overflow-y:auto;
+  font-family:var(--f-mono);font-size:13px;line-height:1.6;box-shadow:inset 0 0 30px #7a6a4055;
+  background-image:repeating-linear-gradient(#0000 0 25px,#2a282214 25px 26px)}
+#log p{margin:0 0 10px;min-width:0;overflow-wrap:anywhere}
+#log .who{display:block;font-size:10px;font-weight:600;letter-spacing:.12em;color:#7a3a2a}
+#log .me .who{color:#3d5a3a}
+
+/* board */
+.mapwrap{position:relative;border:1px solid var(--edge);border-radius:3px;background:var(--well);padding:5px;box-shadow:inset 0 0 12px #000}
+.mapwrap.shake{animation:shake .28s linear}
+@keyframes shake{20%{transform:translate(3px,-2px)}40%{transform:translate(-3px,2px)}60%{transform:translate(2px,2px)}80%{transform:translate(-1px,-1px)}}
+#map{display:block;width:100%;aspect-ratio:1;max-width:100%;touch-action:none;border-radius:1px;background:var(--paper)}
+.mapbtns{position:absolute;right:10px;top:10px;display:flex;flex-direction:column;gap:5px}
+.mapbtns button{width:34px;height:34px;background:#22272ae6;border:1px solid var(--edge);border-radius:3px;font-family:var(--f-mono);font-size:16px;color:var(--paper)}
+#eta{position:absolute;left:10px;top:10px;background:#0b0d0ee6;border:1px solid var(--brass);padding:4px 10px;font-family:var(--f-mono);color:var(--amber);font-size:13px;border-radius:2px}
+.reads{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
+.read{background:var(--well);border:1px solid #000;border-radius:2px;padding:5px 9px;box-shadow:inset 0 0 8px #000;min-width:0}
+.read span{display:block;font-size:9px;font-weight:700;letter-spacing:.12em;color:var(--mute)}
+.read output{display:block;font-family:var(--f-mono);font-size:16px;font-weight:600;color:var(--amber);text-shadow:0 0 8px #f0a73a66;font-variant-numeric:tabular-nums;white-space:nowrap}
+.read.wide{grid-column:1/-1}
+.row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.row>.label{flex:0 0 52px}
+#cmdPanel .row{flex-wrap:nowrap}
+#cmdPanel .row .btn{padding-inline:7px;flex:none}
+#cmdPanel .row .num{flex:1;min-width:0;width:auto}
+#cmdPanel .seg .btn{flex:1;min-width:0}
+.pad{display:grid;grid-template-columns:repeat(3,40px);grid-template-rows:repeat(2,36px);gap:4px}
+.btn{background:linear-gradient(#3d4549,#2a3033);border:1px solid var(--edge);border-bottom-width:3px;border-radius:3px;padding:6px 10px;
+  font-family:var(--f-mono);font-size:13px;color:var(--paper);min-height:36px}
+.btn:active{border-bottom-width:1px;transform:translateY(2px)}
+.btn:disabled{opacity:.4;cursor:default}
+.btn.on{color:var(--amber);border-color:var(--brass);background:linear-gradient(#262b2e,#30373b)}
+.btn.go{font-family:var(--f-display);font-size:15px;letter-spacing:.08em;color:var(--ink);background:linear-gradient(#cfae63,var(--brass));border-color:#6b5524}
+.num{width:84px;background:var(--well);border:1px solid #000;border-radius:2px;padding:7px 8px;text-align:center;
+  font-family:var(--f-mono);font-size:17px;font-weight:600;color:var(--amber);font-variant-numeric:tabular-nums}
+.num.sm{width:64px;font-size:15px}
+select.btn{padding-right:6px}
+.seg{display:flex;gap:4px;flex:1;min-width:0}
+.seg .btn{flex:1;padding-inline:4px;font-family:var(--f-body);font-weight:700}
+.fl{display:flex;flex-direction:column;flex:1;min-width:0;gap:2px;font-size:9px;font-weight:700;letter-spacing:.1em;color:var(--mute)}
+#cmdPanel .fl .num{width:100%;font-size:14px;padding:6px 2px}
+#defCopy{font-family:var(--f-body);font-size:11px;font-weight:700;line-height:1.2}
+.hint{font-size:12px;color:var(--mute);margin:0}
+.olive .hint{color:#d6d4b8}
+
+/* firing table booklet */
+#tblwrap{flex:1;min-height:200px;overflow-y:auto;background:var(--paper);color:var(--ink);border-radius:2px;box-shadow:inset 0 0 30px #7a6a4055}
+#tbl{width:100%;border-collapse:collapse;font-family:var(--f-mono);font-size:14px;font-variant-numeric:tabular-nums}
+#tbl th{position:sticky;top:0;background:#c4b892;font-family:var(--f-body);font-size:11px;letter-spacing:.08em;padding:7px 8px;text-align:right;border-bottom:2px solid var(--ink)}
+#tbl{font-size:13px}
+#tbl th{padding-inline:5px;white-space:nowrap}
+#tbl td{padding:4px 6px;text-align:right;border-bottom:1px solid #2a282222}
+#tbl tr:nth-child(4n+1) td{border-bottom:1px solid #2a282277}
+#tbl td:nth-child(2){font-weight:600}
+#tbl tbody tr{cursor:pointer}
+#tbl tr.sel td{background:#b9a56e}
+
+/* guns */
+.guns{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
+.gun{background:var(--well);border:1px solid #000;border-radius:2px;padding:6px;display:flex;flex-direction:column;gap:4px;align-items:center;min-width:0}
+.gun header{display:flex;width:100%;justify-content:space-between;align-items:center;font-family:var(--f-display);font-size:14px;color:var(--paper)}
+.lamp{width:10px;height:10px;border-radius:50%;background:#3a1a16;box-shadow:inset 0 0 2px #000}
+.lamp.ok{background:var(--green);box-shadow:0 0 8px var(--green)}
+.gun svg line{transform-box:view-box;transform-origin:60px 62px;transition:transform .16s ease-out}
+.station:not([hidden]){animation:stIn .2s ease-out}
+@keyframes stIn{from{opacity:0;transform:translateY(8px)}}
+.gun svg{width:100%;max-width:130px;height:auto}
+.gun .cur{font-family:var(--f-mono);font-size:14px;font-weight:600;color:var(--amber);font-variant-numeric:tabular-nums}
+.gun .adj{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;width:100%}
+.gun .adj .btn{padding:4px 0;font-size:12px;min-height:32px}
+
+/* lever */
+#lever{position:relative;height:56px;background:var(--well);border:1px solid #000;border-radius:28px;box-shadow:inset 0 0 14px #000;overflow:hidden;touch-action:none}
+#lever span{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--f-display);letter-spacing:.2em;color:#6d2a24;font-size:15px;padding-left:50px;pointer-events:none}
+#knob{position:absolute;left:3px;top:3px;width:70px;height:48px;border-radius:24px;border:1px solid #4d130e;
+  background:linear-gradient(#d04a3d,var(--red) 55%,#7c2019);box-shadow:0 2px 6px #000,inset 0 1px 0 #ffffff55;
+  font-family:var(--f-display);font-size:15px;color:#fbe9d8;letter-spacing:.1em;touch-action:none}
+#knob.off{filter:grayscale(1) brightness(.6)}
+#fireMsg{min-height:20px;margin:0 0 6px;font-size:13px;font-weight:700;color:var(--amber)}
+
+.ticker{background:var(--well);border:1px solid #000;border-radius:2px;padding:6px 10px;font-family:var(--f-mono);font-size:12px;color:var(--amber);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* overlays */
+.over{position:absolute;inset:0;background:#07090acc;display:grid;place-items:center;padding:16px;z-index:5}
+.card{width:100%;max-width:380px;max-height:100%;overflow-y:auto;background:var(--paper);color:var(--ink);border-radius:2px;padding:18px 18px 16px;box-shadow:0 12px 40px #000}
+.card h2{font-family:var(--f-display);font-weight:400;font-size:30px;margin:0;letter-spacing:.06em;text-wrap:balance}
+.card .stamp{display:flex;align-items:center;gap:12px;color:#9b2a20;border-bottom:2px solid var(--ink);padding-bottom:10px;margin-bottom:10px}
+.card .stamp svg{width:56px;height:56px;flex:none}
+.card dl{display:grid;grid-template-columns:1fr auto;gap:3px 12px;margin:0 0 12px;font-family:var(--f-mono);font-size:13px;font-variant-numeric:tabular-nums}
+.card dd{margin:0;text-align:right;font-weight:600}
+.card ol{margin:0 0 12px;padding-left:20px;font-size:13.5px}
+.card li{margin-bottom:5px}
+.card .btn.go{width:100%}
+.card small{display:block;font-size:11.5px;color:#5c5648;margin-bottom:12px}
+@media (prefers-reduced-motion:reduce){.over:not([hidden]) .card,.card .stamp svg,.mapwrap.flash::after{animation:none}#log p.typing>span:last-child::after{animation:none}.key.alert i,.mapwrap.shake,.station:not([hidden]){animation:none}.gun svg line{transition:none}}
+</style>
+
+<style>html{padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0);box-sizing:border-box}body{margin:0}</style>
+</head>
+<body>
+<div id="app">
+  <div class="plate">
+    <h1>박격포 사격지휘소</h1>
+    <div class="stats">
+      <div><b>임무</b><span id="sMis">1</span></div>
+      <div><b>잔탄</b><span id="sAmmo">240</span></div>
+      <div><b>시간</b><span id="sTime">0:00</span></div>
+      <div><b>점수</b><span id="sScore">0</span></div>
+    </div>
+    <button class="ghost" id="btnBgm" type="button" aria-pressed="true">음악</button><button class="ghost" id="btnMute" type="button" aria-pressed="true" style="margin-left:0">소리</button><button class="ghost" id="btnManual" type="button" style="margin-left:0">교범</button>
+  </div>
+
+  <div class="keys" role="tablist" aria-label="근무 위치">
+    <button class="key" role="tab" data-st="radio" aria-selected="true" type="button">무전<i></i></button>
+    <button class="key" role="tab" data-st="board" aria-selected="false" type="button">도판<i></i></button>
+    <button class="key" role="tab" data-st="table" aria-selected="false" type="button">사표<i></i></button>
+    <button class="key" role="tab" data-st="guns" aria-selected="false" type="button">포반<i></i></button>
+  </div>
+
+  <section class="station" id="st-radio">
+    <div id="log" aria-live="polite"></div>
+    <div class="panel"><p class="hint" id="radioHint">수신한 명령에 따라 포반에서 방열부터 시작하라.</p></div>
+  </section>
+
+  <section class="station" id="st-board" hidden>
+    <div class="mapwrap" id="mapwrap">
+      <canvas id="map" aria-label="사격도판. 눌러서 표적을 표정한다."></canvas>
+      <div id="eta" hidden></div>
+      <div class="mapbtns">
+        <button type="button" id="zIn" aria-label="확대">+</button>
+        <button type="button" id="zOut" aria-label="축소">−</button>
+        <button type="button" id="zGun" aria-label="진지로 이동">⌂</button>
+        <button type="button" id="zPin" aria-label="핀으로 이동">◎</button>
+      </div>
+    </div>
+    <div class="reads">
+      <div class="read wide"><span>핀 좌표</span><output id="rGrid">도판을 눌러 표정</output></div>
+      <div class="row" style="grid-column:1/-1"><span class="label">판독 포</span><div class="seg" id="segRg"><button class="btn" type="button" data-v="0">1</button><button class="btn on" type="button" data-v="1">2 기준</button><button class="btn" type="button" data-v="2">3</button><button class="btn" type="button" data-v="3">4</button></div></div>
+      <div class="read"><span id="rAzL">방위각</span><output id="rAz">----</output></div>
+      <div class="read"><span id="rDefL">편각</span><output id="rDef">----</output></div>
+      <div class="read"><span>도상사거리</span><output id="rRng">----</output></div>
+      <div class="read"><span>핀 표고</span><output id="rAlt">---</output></div>
+      <button class="btn read wide" type="button" id="azSend" style="text-align:center;font-family:var(--f-body);font-weight:700">편각을 사격명령에 입력</button>
+      <div class="read wide"><span>진지 표고</span><output id="rGunAlt">---</output></div>
+    </div>
+    <div class="panel">
+      <div class="row">
+        <span class="label">핀 이동</span>
+        <div class="pad">
+          <span></span><button class="btn" type="button" data-n="0,1" aria-label="북으로">▲</button><span></span>
+          <button class="btn" type="button" data-n="-1,0" aria-label="서로">◀</button>
+          <button class="btn" type="button" data-n="0,-1" aria-label="남으로">▼</button>
+          <button class="btn" type="button" data-n="1,0" aria-label="동으로">▶</button>
+        </div>
+        <div class="seg" style="flex:0 0 auto">
+          <button class="btn on" type="button" data-step="10">10m</button>
+          <button class="btn" type="button" data-step="100">100m</button>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="row">
+        <span class="label">OTAZ</span><input class="num" id="cOT" inputmode="numeric" value="" placeholder="관측소가 부른 값" aria-label="OTAZ" style="flex:1;min-width:0;font-size:14px">
+      </div>
+      <div class="row" style="margin-top:7px">
+        <span class="label">관측 수정</span>
+        <select class="btn" id="cLR" aria-label="좌우"><option value="-1">좌로</option><option value="1">우로</option></select>
+        <input class="num sm" id="cLRv" inputmode="numeric" value="0" aria-label="좌우 미터">
+        <select class="btn" id="cAD" aria-label="가감"><option value="1">더하기</option><option value="-1">줄이기</option></select>
+        <input class="num sm" id="cADv" inputmode="numeric" value="0" aria-label="가감 미터">
+        <button class="btn go" type="button" id="cApply">핀 이동</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="station" id="st-table" hidden>
+    <div class="panel">
+      <div class="row"><span class="label">장약</span><div class="seg" id="tblCh"></div></div>
+      <p class="hint" id="tblBand" style="margin-top:6px"></p>
+    </div>
+    <div id="tblwrap"><table id="tbl"><thead><tr><th>사거리 m</th><th>사각 밀</th><th>비행 초</th><th>공산 사거리</th><th>공산 편의</th></tr></thead><tbody></tbody></table></div>
+  </section>
+
+  <section class="station" id="st-guns" hidden>
+    <div class="panel olive" id="layPanel">
+      <div class="row" style="justify-content:space-between;margin-bottom:8px">
+        <span class="label" style="flex:1">방열 · 지시 방위각 <b id="layM" style="font-family:var(--f-mono);font-size:14px;color:#fff3c9"></b></span>
+        <button class="btn go" type="button" id="layDone">포위치 보고</button>
+      </div>
+      <div class="guns" id="guns"></div>
+      <p class="hint" id="layHint" style="margin-top:8px">네 문의 바늘을 가운데에 맞춰라. 남은 오차는 탄착에서 드러난다.</p>
+    </div>
+    <div class="panel" id="cmdPanel">
+      <div class="label" style="margin-bottom:8px">사격명령</div>
+      <div class="row" style="margin-bottom:7px"><span class="label">장약</span>
+        <button class="btn" type="button" data-inc="charge,-1">−</button><input class="num sm" id="iCharge" inputmode="numeric" value="1" aria-label="장약">
+        <button class="btn" type="button" data-inc="charge,1">+</button></div>
+      <div class="row" style="margin-bottom:7px"><span class="label">사각 밀</span>
+        <button class="btn" type="button" data-inc="elev,-10">−10</button><button class="btn" type="button" data-inc="elev,-1">−1</button>
+        <input class="num" id="iElev" inputmode="numeric" value="1100" aria-label="사각">
+        <button class="btn" type="button" data-inc="elev,1">+1</button><button class="btn" type="button" data-inc="elev,10">+10</button></div>
+      <div class="row" style="margin-bottom:7px"><span class="label">기준 편각</span>
+        <button class="btn" type="button" data-inc="az,-10">−10</button><button class="btn" type="button" data-inc="az,-1">−1</button>
+        <input class="num" id="iAz" inputmode="numeric" value="2800" aria-label="기준포 편각">
+        <button class="btn" type="button" data-inc="az,1">+1</button><button class="btn" type="button" data-inc="az,10">+10</button></div>
+      <div class="row" style="margin-bottom:7px"><span class="label">날개포 편각</span>
+        <label class="fl"><span>1번포</span><input class="num sm" id="iD0" inputmode="numeric" value="2800"></label>
+        <label class="fl"><span>3번포</span><input class="num sm" id="iD2" inputmode="numeric" value="2800"></label>
+        <label class="fl"><span>4번포</span><input class="num sm" id="iD3" inputmode="numeric" value="2800"></label>
+        <button class="btn" type="button" id="defCopy">기준과<br>같게</button></div>
+      <div class="row" style="margin-bottom:7px"><span class="label">사향속</span><div class="seg" id="segSheaf">
+        <button class="btn on" type="button" data-v="par">평행</button><button class="btn" type="button" data-v="conv">집중</button>
+        <button class="btn" type="button" data-v="open">개방</button><button class="btn" type="button" data-v="spec">특수</button></div></div>
+      <div class="row" style="margin-bottom:7px"><span class="label">신관</span><div class="seg" id="segFuze">
+        <button class="btn on" type="button" data-v="pd">순발</button><button class="btn" type="button" data-v="vt">근접 <span id="vtLeft">80</span></button>
+        <button class="btn" type="button" data-v="dly">지연</button></div></div>
+      <div class="row" id="attRow" style="margin-bottom:7px" hidden><span class="label">자세 밀</span><input class="num" id="iAtt" inputmode="numeric" value="" placeholder="자세" aria-label="표적 자세"></div>
+      <div class="row" style="margin-bottom:7px"><span class="label">사격</span><div class="seg" id="segMode">
+        <button class="btn on" type="button" data-v="adj">조정 1발 <span id="adjN">0/3</span></button><button class="btn" type="button" data-v="ffe">효력사</button></div></div>
+      <div id="ffeBox" hidden>
+      <div class="row" style="margin-bottom:7px"><span class="label">방법</span><div class="seg" id="segMeth">
+        <button class="btn on" type="button" data-v="right">익차사</button><button class="btn" type="button" data-v="cont">연속사</button></div></div>
+      <div class="row" style="margin-bottom:7px"><span class="label">포당 발수</span>
+        <button class="btn" type="button" data-inc="rounds,-1">−</button><input class="num sm" id="iRounds" inputmode="numeric" value="1" aria-label="포당 발수" style="flex:0 0 56px">
+        <button class="btn" type="button" data-inc="rounds,1">+</button>
+        <output id="totR" style="font-family:var(--f-mono);font-weight:600;color:var(--amber);white-space:nowrap"></output>
+        <button class="btn go" type="button" id="endBtn" hidden style="margin-left:auto">사격 끝</button></div>
+      </div>
+      <p class="hint" id="ammoLine" style="margin-bottom:6px;font-family:var(--f-mono);font-size:11.5px"></p>
+      <p class="hint" id="cmdInfo" style="margin-bottom:8px"></p>
+      <p id="fireMsg" role="status"></p>
+      <div id="lever"><span>오른쪽 끝까지 밀어 격발 ▶</span><button id="knob" type="button" aria-label="격발">격발</button></div>
+    </div>
+  </section>
+
+  <div class="ticker" id="ticker">무전 대기</div>
+
+  <div class="over" id="ovResult" hidden><div class="card" id="resCard"></div></div>
+  <div class="over" id="ovManual" hidden><div class="card">
+    <div class="stamp" style="color:var(--ink)"><h2>사격지휘 교범</h2></div>
+    <ol>
+      <li><b>방열</b> 포반에서 네 문을 지시 방위각에 맞추고 포위치를 보고한다. 이때부터 방열 방위각이 편각 2800이다. 남긴 오차만큼 그 포의 탄이 옆으로 샌다.</li>
+      <li><b>표정</b> 관측소가 부른 좌표를 도판에 찍는다. 앞 숫자는 동쪽으로, 뒤 숫자는 북쪽으로 읽는다. 6자리 좌표는 100m 칸의 남서쪽 모서리다.</li>
+      <li><b>판독</b> 도판이 기준포(2번포)에서 핀까지의 방위각, 편각, 도상사거리, 핀 표고를 보여준다. 편각 = 2800 + (방열 방위각 − 표적 방위각). 표적이 오른쪽이면 줄고 왼쪽이면 는다.</li>
+      <li><b>날개포 편각</b> 조정 사격은 기준포 편각만 쓴다. 효력사 전에 사향속을 정하고, 도판의 판독 포를 1·3·4번으로 바꿔 각 포의 편각을 읽어 사격명령에 넣는다. 평행사향속은 전 포가 기준 편각과 같다. 효력사의 사향속은 조정으로 잡은 표적 중심에 맞춰 좌우 대칭으로 펼쳐진다. 평행사향속은 포 간격 40m 네 문이라 탄착 간격 40m, 살상범위 40m를 더해 정면 200m를 덮는다. 개방사향속은 탄착 간격 80m로 정면 320m다. 포별 사거리 차이는 포반이 맞춘다.</li>
+      <li><b>보조사거리</b> 도상사거리 + (핀 표고 − 진지 표고) ÷ 2. 표적이 높으면 늘고 낮으면 준다.</li>
+      <li><b>사표</b> 보조사거리가 들어가는 장약을 고르고 사각을 읽는다. 사표는 25m 단위다. 공산오차는 같은 제원으로 쏜 탄의 절반이 그 거리 안에 떨어진다는 뜻이고, 비행시간이 길수록 커진다. 한 발로 안 잡히는 표적에 관측소가 발수를 늘려 부르는 이유다.</li>
+      <li><b>사향속</b> 점표적은 집중, 지역표적은 평행, 포목선에 가로놓인 선표적은 개방, 비스듬한 선표적은 특수에 자세를 넣는다.</li>
+      <li><b>신관</b> 살상범위는 어느 신관이든 40m다. 표적에 맞지 않는 신관은 범위가 아니라 효과가 줄어든다. 그럭저럭 맞으면 25%, 전혀 맞지 않으면 50% 줄어서 그만큼 발수가 더 든다. 노출 표적은 순발과 근접이 맞고 지연은 50% 감소. 참호와 포상은 근접이 맞고 순발은 25%, 지연은 50% 감소. 유개 엄폐호는 지연이 맞고 순발은 25%, 근접은 50% 감소. 근접신관은 전체 80발뿐이고, 조정 사격에 쓰면 탄착 관측이 흐려진다.</li>
+      <li><b>사격방법</b> 효력사는 조정 사격이 끝난 뒤에만 쏜다. 조정 중 명중하거나 3발을 다 쏘면 관측소가 효력사의 방법과 발수를 부른다. 효력사의 사격포, 방법, 발수는 관측소, 화력지휘소, 포진 순으로 통제된다. 관측소가 부르는 발수는 소대 발수다. 화력지휘소는 네 문으로 나눠 포당 발수를 내리고, 총 발수가 소대 발수와 맞아야 포진이 쏜다. 익차사는 1번포부터 4번포까지 2~3초 간격으로 차례로, 연속사는 포마다 쉬지 않고 쏜다. 조정 사격은 기준포 한 문이 쏘고, 효력사는 언제나 소대 네 문 전부가 충분한 발수로 쏜다. 도중에 표적이 파괴되면 관측소가 사격을 중지시켜 남은 탄은 쏘지 않는다. 포마다 60발, 근접신관은 전체 80발이고 보급은 없다. 한 번에 쏠 수 있는 최대 발수는 소대 52발(포당 13발)이다. 조정 사격은 발수에 넣지 않는다.</li>
+      <li><b>사격</b> 조정 사격은 기준포로 한 발씩, 최대 3발이다. 한 발이라도 표적 40m 안에 떨어지면 명중이고 곧바로 효력사로 넘어간다. 3발이 모두 빗나가면 마지막 수정을 반영해 효력사만 쏜다. 효력사에 들어가면 관측소는 더 이상 수정을 부르지 않고 효과만 알린다. 표적이 파괴되면 끝나고, 아니면 같은 통제로 세 번까지 반복하거나 사격 끝을 보고한다. 관측소는 사격요청 때 OTAZ(관측소에서 표적을 보는 방위각)를 부르고, 수정은 그 관측선 기준으로 온다. 더하기는 관측소에서 멀어지는 쪽이다. 도판에 OTAZ를 넣고 관측 수정으로 핀을 옮기고 제원을 다시 뽑는다.</li>
+    </ol>
+    <small>지형은 생성한 가상 지형이고 좌표는 MGRS 형식만 따른다. 사표는 게임용 탄도 모형이며 장약은 6호까지, 최대사거리 6,250m, 살상범위 40m로 맞췄다.</small>
+    <button class="btn go" type="button" id="manClose">닫기</button>
+  </div></div>
+</div>
+
+<script>
+(()=>{
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const MIL=Math.PI/3200, G=9.81, RMAX=[1300,2300,3300,4300,5300,6250],NC=RMAX.length,KR=40, E_MIN=800, E_MAX=1500;
+const MAP={e0:40000,n0:10000,size:8000}, NG=161, CELL=50, ZONE='52S CH';
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)), rnd=(a,b)=>a+Math.random()*(b-a);
+const gauss=()=>{let u=0,v=0;while(!u)u=Math.random();v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(6.2831853*v)};
+const norm=m=>((Math.round(m)%6400)+6400)%6400, pad=(n,w)=>String(n).padStart(w,'0');
+const vec=m=>[Math.sin(m*MIL),Math.cos(m*MIL)];
+const azOf=(a,b)=>norm(Math.atan2(b.x-a.x,b.y-a.y)/MIL), dist=(a,b)=>Math.hypot(b.x-a.x,b.y-a.y);
+const tblRange=(c,mil)=>RMAX[c-1]*Math.sin(2*mil*MIL);
+const tblElev=(c,R)=>{const r=R/RMAX[c-1];return (r>1||r<Math.sin(2*E_MAX*MIL))?null:(Math.PI-Math.asin(r))/2/MIL};
+const pe=(c,mil)=>{const t=2*Math.sqrt(RMAX[c-1]*G)*Math.sin(mil*MIL)/G;return{r:.45*t,d:.28*t}};
+const tof=(c,mil)=>2*Math.sqrt(RMAX[c-1]*G)*Math.sin(mil*MIL)/G;
+const grid=(p,d)=>{const k=d===8?10:100,w=d/2;return `${ZONE} ${pad(Math.floor(p.x/k)%10**w,w)} ${pad(Math.floor(p.y/k)%10**w,w)}`};
+
+/* ---------- terrain (generated; swap alt() for a real elevation source later) ---------- */
+const Hh=new Float32Array(NG*NG); let aMin=1e9,aMax=-1e9;
+(function(){const seed=20261007;
+  const h2=(x,y)=>{let n=(x*374761393+y*668265263+seed*1442695041)|0;n=(n^(n>>>13))*1274126177|0;return((n^(n>>>16))>>>0)/4294967296};
+  const vn=(x,y)=>{const xi=Math.floor(x),yi=Math.floor(y),fx=x-xi,fy=y-yi,sx=fx*fx*(3-2*fx),sy=fy*fy*(3-2*fy);
+    const a=h2(xi,yi),b=h2(xi+1,yi),c=h2(xi,yi+1),d=h2(xi+1,yi+1);return a+(b-a)*sx+(c-a)*sy+(a-b-c+d)*sx*sy};
+  for(let j=0;j<NG;j++)for(let i=0;i<NG;i++){let x=i*CELL/2700,y=j*CELL/2700,amp=1,s=0,t=0;
+    for(let o=0;o<5;o++){let v=vn(x+o*17.3,y+o*9.1);if(o<2)v=1-Math.abs(2*v-1);s+=v*amp;t+=amp;amp*=.5;x*=2.03;y*=2.03}
+    const a=110+820*Math.pow(s/t,1.45);Hh[j*NG+i]=a;aMin=Math.min(aMin,a);aMax=Math.max(aMax,a)}})();
+function alt(x,y){const gx=clamp((x-MAP.e0)/CELL,0,NG-1.001),gy=clamp((y-MAP.n0)/CELL,0,NG-1.001),i=gx|0,j=gy|0,fx=gx-i,fy=gy-j,k=j*NG+i;
+  return Hh[k]*(1-fx)*(1-fy)+Hh[k+1]*fx*(1-fy)+Hh[k+NG]*(1-fx)*fy+Hh[k+NG+1]*fx*fy}
+
+const BASE=document.createElement('canvas'), BP=1000; BASE.width=BASE.height=BP;
+(function(){const c=BASE.getContext('2d'),im=c.createImageData(BP,BP),d=im.data,m=MAP.size/BP;
+  const ramp=[[196,204,162],[219,208,170],[203,170,124],[176,138,100]];
+  for(let py=0;py<BP;py++)for(let px=0;px<BP;px++){const x=MAP.e0+(px+.5)*m,y=MAP.n0+MAP.size-(py+.5)*m,a=alt(x,y);
+    const sh=clamp(1+((alt(x-40,y)-alt(x+40,y))+(alt(x,y+40)-alt(x,y-40)))/260,.72,1.16);
+    const t=clamp((a-aMin)/(aMax-aMin),0,.999)*3,k=t|0,f=t-k,o=(py*BP+px)*4;
+    for(let q=0;q<3;q++)d[o+q]=(ramp[k][q]+(ramp[k+1][q]-ramp[k][q])*f)*sh;d[o+3]=255}
+  c.putImageData(im,0,0);
+  const sc=BP/MAP.size,P=(gx,gy)=>[gx*CELL*sc,BP-gy*CELL*sc];
+  for(const idx of[0,1]){c.beginPath();
+    for(let j=0;j<NG-1;j++)for(let i=0;i<NG-1;i++){const k=j*NG+i,v=[Hh[k],Hh[k+1],Hh[k+NG+1],Hh[k+NG]],lo=Math.min(...v),hi=Math.max(...v);
+      for(let L=Math.ceil(lo/40)*40;L<hi;L+=40){if((L%200===0)!==!!idx)continue;const pts=[];
+        const e=(a,b,x1,y1,x2,y2)=>{if((a<L)!==(b<L)){const t=(L-a)/(b-a);pts.push(P(x1+(x2-x1)*t,y1+(y2-y1)*t))}};
+        e(v[0],v[1],i,j,i+1,j);e(v[1],v[2],i+1,j,i+1,j+1);e(v[2],v[3],i+1,j+1,i,j+1);e(v[3],v[0],i,j+1,i,j);
+        for(let q=0;q+1<pts.length;q+=2){c.moveTo(pts[q][0],pts[q][1]);c.lineTo(pts[q+1][0],pts[q+1][1])}}}
+    c.strokeStyle=idx?'rgba(96,62,34,.62)':'rgba(96,62,34,.3)';c.lineWidth=idx?1.3:.6;c.stroke()}})();
+
+const PAPER=(()=>{try{const t=document.createElement('canvas');t.width=t.height=160;const x=t.getContext('2d'),im=x.createImageData(160,160);for(let i=0;i<im.data.length;i+=4){const v=225+Math.random()*30;im.data[i]=v;im.data[i+1]=v-4;im.data[i+2]=v-14;im.data[i+3]=255}x.putImageData(im,0,0);return x.createPattern(t,'repeat')}catch(e){return null}})();
+/* ---------- state ---------- */
+const S={mission:0,total:0,phase:'lay',M:0,guns:[],layDone:false,target:null,pin:null,ammo:14,used:0,t0:0,tEnd:0,
+  tblC:1,marks:[],shots:[],bursts:[],pings:[],symAz:null,raf:0,flashT:0,reveal:false,dman:[false,false,false,false],step:10,rg:1,sheaf:'par',mode:'adj',fuze:'pd',vt:80,fg:[true,true,true,true],meth:'right',pass:0,ffeUsed:0,station:'radio',history:[]};
+const DEF0=2800,DF=['#iD0','#iAz','#iD2','#iD3'],defOf=az=>norm(DEF0+S.M-az),azFromDef=d=>norm(S.M+DEF0-d);
+function aimPt(i){const B=base(),P=S.pin,g=S.guns[i],u=vec(azOf(B,P)+1600),o=(1-i)*80;if(S.sheaf==='conv')return P;if(S.sheaf==='open')return{x:P.x+u[0]*o,y:P.y+u[1]*o};
+  if(S.sheaf==='spec'&&$('#iAtt').value.trim()!==''){let a=vec(norm(val('#iAtt')));if(a[0]*u[0]+a[1]*u[1]<0)a=[-a[0],-a[1]];return{x:P.x+a[0]*o,y:P.y+a[1]*o}}return{x:P.x+g.x-B.x,y:P.y+g.y-B.y}}
+function aimC(i){const B=base(),P=S.pin,g=S.guns[i],u=vec(azOf(B,P)+1600),o=(1.5-i)*80,cx=S.guns.reduce((a,q)=>a+q.x,0)/4,cy=S.guns.reduce((a,q)=>a+q.y,0)/4;if(S.sheaf==='conv')return P;if(S.sheaf==='open')return{x:P.x+u[0]*o,y:P.y+u[1]*o};
+  if(S.sheaf==='spec'&&$('#iAtt').value.trim()!==''){let a=vec(norm(val('#iAtt')));if(a[0]*u[0]+a[1]*u[1]<0)a=[-a[0],-a[1]];return{x:P.x+a[0]*o,y:P.y+a[1]*o}}return{x:P.x+g.x-cx,y:P.y+g.y-cy}}
+const setDefs=v=>DF.forEach(d=>$(d).value=pad(v,4));
+const base=()=>S.guns[1], gunAlt=()=>alt(base().x,base().y);
+
+/* ---------- sound (all synthesized) ---------- */
+const AU={c:null,out:null,nb:null,muted:false,amb:null};
+function au(){if(AU.muted)return null;if(!AU.c){const C=window.AudioContext||window.webkitAudioContext;if(!C)return null;const c=new C(),comp=c.createDynamicsCompressor();
+  comp.threshold.value=-16;comp.ratio.value=5;comp.attack.value=.003;comp.release.value=.25;const m=c.createGain();m.gain.value=.9;m.connect(comp);comp.connect(c.destination);
+  const n=c.createBuffer(1,c.sampleRate*2,c.sampleRate),d=n.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;AU.c=c;AU.out=m;AU.nb=n;ambient()}
+  if(AU.c.state==='suspended')AU.c.resume();return AU.c}
+function nz(t,dur,o){const c=AU.c,s=c.createBufferSource();s.buffer=AU.nb;s.loop=true;const f=c.createBiquadFilter();f.type=o.type||'lowpass';f.frequency.setValueAtTime(o.f||1000,t);
+  if(o.f2)f.frequency.exponentialRampToValueAtTime(o.f2,t+dur);f.Q.value=o.q||.7;const g=c.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(o.g||.3,t+(o.a||.003));
+  g.gain.exponentialRampToValueAtTime(.0001,t+dur);s.connect(f);f.connect(g);g.connect(o.dest||AU.out);s.start(t,Math.random()*1.5);s.stop(t+dur+.05);return g}
+function tn(t,dur,o){const c=AU.c,s=c.createOscillator();s.type=o.w||'sine';s.frequency.setValueAtTime(o.f,t);if(o.f2)s.frequency.exponentialRampToValueAtTime(o.f2,t+dur);
+  const g=c.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(o.g||.2,t+(o.a||.004));if(o.hold)g.gain.setValueAtTime(o.g||.2,t+o.hold);
+  g.gain.exponentialRampToValueAtTime(.0001,t+dur);s.connect(g);g.connect(o.dest||AU.out);s.start(t);s.stop(t+dur+.05)}
+function ambient(){try{const c=AU.c,s=c.createBufferSource(),f=c.createBiquadFilter(),g=c.createGain(),l=c.createOscillator(),lg=c.createGain();s.buffer=AU.nb;s.loop=true;
+  f.type='lowpass';f.frequency.value=260;g.gain.value=.022;l.frequency.value=.07;lg.gain.value=.012;l.connect(lg);lg.connect(g.gain);s.connect(f);f.connect(g);g.connect(AU.out);s.start();l.start();AU.amb=g}catch(e){}}
+function hiss(){try{const c=au();if(!c)return()=>{};const t=c.currentTime,s=c.createBufferSource(),f=c.createBiquadFilter(),g=c.createGain();s.buffer=AU.nb;s.loop=true;f.type='bandpass';f.frequency.value=2100;f.Q.value=.5;
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.03,t+.05);s.connect(f);f.connect(g);g.connect(AU.out);s.start(t,Math.random());
+  return()=>{try{const e=c.currentTime;g.gain.cancelScheduledValues(e);g.gain.setValueAtTime(g.gain.value,e);g.gain.linearRampToValueAtTime(0,e+.06);s.stop(e+.1)}catch(_){}}}catch(e){return()=>{}}}
+function snd(kind,delay=0){try{const c=au();if(!c)return;const t=c.currentTime+delay;switch(kind){
+  case 'click':nz(t,.022,{type:'highpass',f:2600,g:.22});tn(t,.018,{f:1900,w:'square',g:.025});break;
+  case 'key':nz(t,.045,{type:'bandpass',f:1300,q:2,g:.32});tn(t,.07,{f:190,f2:80,g:.16});break;
+  case 'ratchet':nz(t,.016,{type:'bandpass',f:2800,q:5,g:.16});break;
+  case 'fire':tn(t,.4,{f:130,f2:36,g:.95});nz(t,.55,{f:1100,f2:110,g:.85});nz(t+.008,.1,{type:'bandpass',f:2600,q:1.4,g:.28});tn(t+.015,.3,{f:940,f2:900,w:'triangle',g:.04});break;
+  case 'boom':tn(t,1.5,{f:72,f2:26,g:.75});nz(t,2,{f:380,f2:55,g:.95,a:.012});nz(t,.22,{type:'bandpass',f:800,q:.8,g:.25});nz(t+.25,1.2,{f:200,f2:60,g:.25,a:.2});break;
+  case 'air':nz(t,.12,{type:'highpass',f:1400,g:.55});tn(t,1.1,{f:95,f2:32,g:.5});nz(t,1.4,{f:650,f2:80,g:.6,a:.004});break;
+  case 'stamp':tn(t,.14,{f:150,f2:55,g:.55});nz(t,.07,{f:700,g:.45});break;
+  case 'tx':nz(t,.012,{type:'highpass',f:3200,g:.32});nz(t+.008,.13,{type:'bandpass',f:1900,q:.45,g:.2});tn(t+.03,.08,{f:1020,w:'square',g:.045});tn(t+.12,.08,{f:1320,w:'square',g:.045});break;
+  case 'rx':nz(t,.1,{type:'bandpass',f:1750,q:.55,g:.24});tn(t+.07,.07,{f:1450,w:'square',g:.045});break;
+  case 'out':nz(t,.2,{type:'bandpass',f:2300,q:.4,g:.2});tn(t+.19,.055,{f:1350,w:'square',g:.05});tn(t+.28,.055,{f:1350,w:'square',g:.05});break;
+  case 'phone':tn(t,.16,{f:440,w:'sawtooth',g:.035});tn(t+.2,.16,{f:440,w:'sawtooth',g:.035});break}}catch(e){}}
+/* BGM: generated march — snare rudiment, low drum, minor bass ostinato, pad */
+const BGM={on:true,g:null,timer:0,step:0,next:0};
+function bgmStart(){const c=au();if(!c||BGM.timer||!BGM.on)return;BGM.g=c.createGain();BGM.g.gain.value=0;BGM.g.gain.linearRampToValueAtTime(.16,c.currentTime+3);BGM.g.connect(AU.out);
+  BGM.next=c.currentTime+.1;BGM.step=0;BGM.timer=setInterval(bgmTick,90)}
+function bgmStop(){if(!BGM.timer)return;clearInterval(BGM.timer);BGM.timer=0;try{const c=AU.c,g=BGM.g;g.gain.setTargetAtTime(0,c.currentTime,.4);setTimeout(()=>g.disconnect(),2500)}catch(e){}}
+const BASS=[38,38,41,38,36,36,33,36,38,38,41,43,41,40,38,36],PADS=[[50,53,57],[48,52,55],[46,50,53],[45,49,52]];
+const mf=m=>440*Math.pow(2,(m-69)/12);
+function bgmTick(){const c=AU.c;if(!c||!BGM.g)return;const sp=60/92/4;
+  while(BGM.next<c.currentTime+.25){const t=BGM.next,i=BGM.step%64,b=i%16,d=BGM.g;
+    if(b===0||b===8||(b===14&&i>=32))tn(t,.35,{f:95,f2:42,g:.55,dest:d});
+    if(b===4||b===12)nz(t,.16,{type:'bandpass',f:1900,q:.9,g:.42,dest:d});
+    if([2,3,10,11].includes(b)&&i>=16)nz(t,.05,{type:'bandpass',f:2300,q:1.2,g:.13,dest:d});
+    if(b%2===0)nz(t,.03,{type:'highpass',f:6500,g:.05,dest:d});
+    if(i%2===0){const n=BASS[(i/2)%16];tn(t,sp*1.8,{f:mf(n),w:'triangle',g:.3,hold:sp*1.2,dest:d})}
+    if(i%16===0){const ch=PADS[(i/16)%4];for(const n of ch)tn(t,sp*15,{f:mf(n),w:'sawtooth',g:.018,a:.6,hold:sp*12,dest:d})}
+    if(i>=48&&b%4===2)tn(t,sp*.9,{f:mf(BASS[b]+24),w:'square',g:.025,dest:d});
+    BGM.next+=sp;BGM.step++}}
+const buzz=ms=>{try{navigator.vibrate&&navigator.vibrate(ms)}catch(e){}};
+document.addEventListener('pointerdown',()=>{au();bgmStart()},{once:true});
+
+/* ---------- radio ---------- */
+let tblC=1;
+const reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+function say(who,text,me){const p=document.createElement('p');p.className=(me?'me ':'')+'typing';const radio=who!=='포진';snd(me?'tx':radio?'rx':'phone');const stop=radio?hiss():()=>{};
+  const w=document.createElement('span');w.className='who';w.textContent=who;const b=document.createElement('span');p.append(w,b);$('#log').append(p);
+  $('#ticker').textContent=`${who} ▸ ${text}`;if(S.station!=='radio')$('[data-st="radio"]').classList.add('alert');
+  let i=0;const tick=()=>{i=reduce?text.length:Math.min(text.length,i+2);b.textContent=text.slice(0,i);$('#log').scrollTop=1e6;if(i<text.length)setTimeout(tick,22);else{p.classList.remove('typing');stop();if(radio)snd('out')}};setTimeout(tick,reduce?0:160)}
+
+/* ---------- stations ---------- */
+function go(st){S.station=st;$$('.key').forEach(k=>{const on=k.dataset.st===st;k.setAttribute('aria-selected',on);if(on)k.classList.remove('alert')});
+  $$('.station').forEach(s=>s.hidden=s.id!=='st-'+st);if(st==='board'){resize();draw()}}
+$$('.key').forEach(k=>k.onclick=()=>{snd('key');buzz(8);go(k.dataset.st)});
+
+/* ---------- mission flow ---------- */
+function occupy(){S.phase='lay';S.layDone=false;
+  S.M=norm(Math.round(rnd(0,6400)/100)*100);const mv=vec(S.M),back=rnd(2200,3200),c={x:clamp(44000-mv[0]*back+rnd(-400,400),40700,47300),y:clamp(14000-mv[1]*back+rnd(-400,400),10700,17300)};
+  const u=vec(S.M+1600);const am=S.guns.length?S.guns.map(g=>g.ammo):[60,60,60,60];S.guns=[0,1,2,3].map(i=>({ammo:am[i],x:c.x+u[0]*(1.5-i)*40,y:c.y+u[1]*(1.5-i)*40,err:Math.round(rnd(20,80))*(Math.random()<.5?-1:1)}));
+  S.marks=[];S.target=null;S.pin=null;S.reveal=false;S.symAz=null;view.cx=c.x+mv[0]*1800;view.cy=c.y+mv[1]*1800;view.z=1.6;
+  setDefs(DEF0);renderGuns();updateReads();updateHud();
+  say('중대장',`진지 점령 완료. 방열 방위각 ${pad(S.M,4)}. 네 문 방열 후 포위치 보고하라. 이상.`);
+  $('#radioHint').textContent='포반으로 가서 네 문을 방열하라.';$('[data-st="guns"]').classList.add('alert')}
+function newMission(){S.mission++;S.phase='plan';$('#fireMsg').textContent='';S.used=0;S.ffeUsed=0;S.marks=[];S.pin=null;S.reveal=false;S.defOk=null;S.t0=performance.now();S.tEnd=0;
+  if(!S.bag||!S.bag.length){S.bag=TG.map((_,i)=>i);for(let i=S.bag.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[S.bag[i],S.bag[j]]=[S.bag[j],S.bag[i]]}}const D=TG[S.bag.pop()],type=D.type;let c,gAz;
+  for(let k=0;k<300;k++){gAz=norm(S.M+rnd(-600,600));const d=S.mission===1?rnd(2000,3400):rnd(1500,6000),v=vec(gAz);
+    c={x:base().x+v[0]*d,y:base().y+v[1]*d};const ax=d+(alt(c.x,c.y)-gunAlt())/2;if(c.x>40500&&c.x<47500&&c.y>10500&&c.y<17500&&ax>500&&ax<6000)break}
+  gAz=azOf(base(),c);let att=0,els=[];const g=vec(gAz),u=vec(gAz+1600),name=D.name[Math.random()*D.name.length|0];let desc=D.desc;
+  if(type==='point')els=[{x:c.x,y:c.y}];
+  else if(type==='cluster')for(const l of[-30,0,30])els.push({x:c.x+u[0]*l,y:c.y+u[1]*l});
+  else if(type==='area'){for(const l of[-75,-25,25,75])for(const dp of[-12,12])els.push({x:c.x+u[0]*l+g[0]*dp,y:c.y+u[1]*l+g[1]*dp})}
+  else{att=type==='line'?gAz+1600:gAz+1600+(Math.random()<.5?-1:1)*rnd(500,900);att=Math.round(norm(att)%3200/10)*10;let a=vec(att);if(a[0]*u[0]+a[1]*u[1]<0)a=[-a[0],-a[1]];
+    for(let q=-140;q<=140;q+=40)els.push({x:c.x+a[0]*q,y:c.y+a[1]*q});desc+=`, 자세 ${pad(att,4)}`}
+  els.forEach(e=>e.hp=D.hp);S.mh=S.mh||[];let m=Math.random()<.5?'right':'cont';const h=S.mh.slice(-2);if(h.length&&h.every(x=>x===m)&&(h.length>1||Math.random()<.6))m=m==='right'?'cont':'right';S.mh.push(m);const par=D.n;
+  const rookie=S.mission>3&&Math.random()<.5,sg=rookie?45:12,rep={x:c.x+gauss()*sg,y:c.y+gauss()*sg},digits=rookie?6:8;
+  let op;for(let k=0;k<300;k++){const v=vec(azOf(c,base())+rnd(-1400,1400)),d=rnd(700,1800);op={x:c.x+v[0]*d,y:c.y+v[1]*d};if(op.x>40300&&op.x<47700&&op.y>10300&&op.y<17700)break}
+  const otAz=norm(Math.round(azOf(op,c)/10)*10)%6400;$('#cOT').value='';
+  S.target={type,c,els,att,name,rookie,prot:D.prot,hp:D.hp,req:{m,n:D.n},par,op,otAz,adjUsed:0,ffe:0,grade:'무효'};
+  $('#iAtt').value='';S.dman=[false,false,false,false];setDefs(DEF0);$('#endBtn').hidden=true;
+  adjUi();setMode('adj');say(rookie?'관측소(신병)':'관측소',`화력지휘소, 여기는 관측소. 사격임무. 좌표 ${grid(rep,digits)}, OTAZ ${pad(otAz,4)}. ${name}. ${desc}. 조정 사격. 이상.`);
+  $('#radioHint').textContent='도판에 좌표를 표정하고 제원을 뽑아라.';$('[data-st="board"]').classList.add('alert');updateHud();updateReads();paintGuns();draw()}
+
+/* ---------- lay ---------- */
+function renderGuns(){$('#layM').textContent=pad(S.M,4);const box=$('#guns');box.innerHTML='';
+  S.guns.forEach((g,i)=>{const d=document.createElement('div');d.className='gun';
+    d.innerHTML=`<header><span>${i+1}번포${i===1?' · 기준':''}</span><span class="lamp"></span></header>
+    <svg viewBox="0 0 120 70" aria-hidden="true"><path d="M12 62A48 48 0 0 1 108 62" fill="none" stroke="#40484d" stroke-width="2"/>
+    <path d="M60 14v8M26 28l5 6M94 28l-5 6" stroke="#b4924c" stroke-width="2" fill="none"/><line x1="60" y1="62" x2="60" y2="18" stroke="#f0a73a" stroke-width="2.5" stroke-linecap="round"/>
+    <circle cx="60" cy="62" r="5" fill="#b4924c"/></svg><div class="cur"></div>
+    <div class="adj">${[-10,-1,1,10].map(v=>`<button class="btn" type="button" data-g="${i}" data-d="${v}" aria-label="${i+1}번포 ${v>0?'+':''}${v}밀">${v>0?'+':'−'}${Math.abs(v)}</button>`).join('')}</div>`;
+    box.append(d)});paintGuns()}
+function paintGuns(){$$('.gun').forEach((d,i)=>{const g=S.guns[i];d.querySelector('line').style.transform=`rotate(${clamp(g.err,-100,100)*.62}deg)`;
+    d.querySelector('.cur').textContent=S.layDone?'고정':pad(norm(S.M+g.err),4);d.querySelector('.lamp').classList.toggle('ok',g.err===0);
+    d.querySelectorAll('button').forEach(b=>b.disabled=S.layDone)});
+  $('#guns').hidden=S.layDone;$('#layDone').disabled=S.layDone;$('#layDone').textContent=S.layDone?'편각 2800 고정':'포위치 보고';
+  $('#cmdPanel').style.opacity=S.layDone?1:.45;$('#knob').classList.toggle('off',!S.layDone||S.phase!=='plan')}
+$('#guns').onclick=e=>{const b=e.target.closest('button');if(!b||S.layDone)return;snd('click');S.guns[+b.dataset.g].err+=+b.dataset.d;paintGuns()};
+$('#layDone').onclick=()=>{if(S.layDone)return;S.layDone=true;snd('key');const off=S.guns.filter(g=>g.err).length;
+  $('#layHint').textContent=off?`${off}문에 오차가 남은 채로 고정했다.`:'네 문 모두 정렬됐다.';
+  setDefs(DEF0);say('화력지휘소',`포위치 보고. 네 문 방열 완료. 방위각 ${pad(S.M,4)}에 편각 2800 고정. 사격 준비 끝.`,true);setTimeout(newMission,reduce?0:1300);paintGuns()};
+
+/* ---------- command inputs ---------- */
+const val=id=>parseInt($(id).value,10)||0;
+function autoDefs(){if(!S.guns.length||!S.layDone)return;const b=norm(val('#iAz')),bz=S.pin?azOf(base(),S.pin):0;for(const i of[0,2,3])if(!S.dman[i])$(DF[i]).value=pad(S.pin?norm(b+bz-azOf(S.guns[i],aimPt(i))):b,4)}
+function cmdInfo(){cmdInfo0();$('#totR').textContent='총 '+S.fg.filter(Boolean).length*clamp(val('#iRounds'),1,13)+'발';if(S.pin&&S.guns.length)$('#cmdInfo').textContent+=` · 도판 편각 ${pad(defOf(azOf(base(),S.pin)),4)}, 도상사거리 ${Math.round(dist(base(),S.pin)).toLocaleString()}m`;const cc=clamp(val('#iCharge'),1,NC);if(cc!==tblC){tblC=cc;renderTable()}else tblNote()}
+function cmdInfo0(){const c=clamp(val('#iCharge'),1,NC),e=val('#iElev');
+  $('#cmdInfo').textContent=(e<E_MIN||e>E_MAX)?`사각은 ${E_MIN}–${E_MAX}밀 안에서 쓴다.`:`이 제원의 사표 사거리 ${Math.round(tblRange(c,e)).toLocaleString()}m · 비행시간 ${Math.round(tof(c,e))}초`}
+$$('[data-inc]').forEach(b=>b.onclick=()=>{snd('click');const[k,d]=b.dataset.inc.split(',');
+  if(k==='charge')$('#iCharge').value=clamp(val('#iCharge')+ +d,1,NC);
+  if(k==='elev')$('#iElev').value=clamp(val('#iElev')+ +d,E_MIN,E_MAX);
+  if(k==='rounds')$('#iRounds').value=clamp(val('#iRounds')+ +d,1,13);
+  if(k==='az')$('#iAz').value=pad(norm(val('#iAz')+ +d),4);cmdInfo()});
+['#iCharge','#iElev','#iAz'].forEach(s=>$(s).oninput=cmdInfo);[0,2,3].forEach(i=>$(DF[i]).oninput=()=>{S.dman[i]=true;cmdInfo()});$('#cOT').oninput=()=>draw();
+$('#defCopy').onclick=()=>{snd('click');S.dman=[true,true,true,true];setDefs(norm(val('#iAz')));cmdInfo();draw()};
+$('#iAtt').oninput=()=>{updateReads();draw()};
+$('#segRg').onclick=e=>{const b=e.target.closest('button');if(!b)return;snd('click');S.rg=+b.dataset.v;$$('#segRg button').forEach(x=>x.classList.toggle('on',x===b));updateReads();draw()};
+function seg(id,key,after){$(id).onclick=e=>{const b=e.target.closest('button');if(!b)return;snd('click');S[key]=b.dataset.v;
+  $$(id+' button').forEach(x=>x.classList.toggle('on',x===b));after&&after()}}
+seg('#segSheaf','sheaf',()=>{$('#attRow').hidden=S.sheaf!=='spec';updateReads()});seg('#segMeth','meth');
+($('#segGuns')||{}).onclick=e=>{const b=e.target.closest('button');if(!b)return;snd('click');const i=+b.dataset.g;S.fg[i]=!S.fg[i];b.classList.toggle('on',S.fg[i]);cmdInfo()};$('#iRounds').oninput=()=>cmdInfo();
+const MN={salvo:'제사',right:'익차사',cont:'연속사',named:'지명사 2번포'};
+const TGG=[
+ ['point','open',1,4,'점표적, 노출',['보급 트럭','지휘 차량','통신 중계 차량','유조차','견인포 1문','대공 기관포','노출된 무반동총조','관측병 2명','저격수 은신처','급수 차량','야전 취사 차량','탄약 운반 차량','정찰 오토바이조','전파 탐지기','탐조등']],
+ ['point','hard',3,16,'점표적, 유개 엄폐, 견고',['기관총 유개호','관측소 벙커','대전차포 엄체호','지휘 벙커','통신 벙커','탄약 엄체호','콘크리트 토치카','동굴 진지 입구','유개 교통호 교차점','반지하 지휘소','중기관총 토치카','저격 벙커']],
+ ['cluster','open',1,8,'소형 지역표적, 노출, 정면 60',['지휘소 천막군','야전 취사장','야전 정비소','급유소','통신소 천막','보급품 야적장','포병 관측반','공병 장비 집결지','도하 준비조','탄약 하역조','대전차 미사일조','야전 전화 교환소','임시 검문소','연료통 야적장']],
+ ['cluster','trench',2,12,'소형 지역표적, 포상 엄폐, 정면 60',['박격포 진지','대공포 진지','견인포 진지','무반동총 진지','무개 기관총 진지','대전차포 진지','다련장 로켓 진지','고사기관총 진지','유탄발사기 진지','관측 참호','전초 진지','청음초']],
+ ['area','open',1,8,'지역표적, 노출, 정면 150',['개활지에 집결한 보병','공격 대기 중인 보병 중대','행군 휴식 중인 병력','하차 중인 차량화 보병','도하 대기 병력','재편성 중인 병력','배식 중인 병력','보급 수령 병력','침투조 집결지','집결 중인 예비대','차량 주차장','공병 작업대','헬기 강습 착륙 병력','진지 공사 중인 병력']],
+ ['area','open',2,16,'지역표적, 노출, 정면 150, 밀집',['숙영지','대대 집결지','보급소','탄약 집적소','유류 집적소','차량 정비 집결지','포병 탄약 보급소','야전 병영','장비 집적소']],
+ ['line','trench',1,8,'선표적, 무개 참호, 길이 280',['참호선','전방 방어선','교통호','능선 참호','역사면 참호','소대 방어진지','철조망 뒤 산병호','하천 제방 방어선','도로 차단 진지','마을 외곽 방어선','수목선 방어진지','고지 정상 참호']],
+ ['oblique','open',1,8,'선표적, 노출, 길이 280',['도로상 차량 종대','행군 종대','보급 수송대','능선을 넘는 보병 종대','하천을 건너는 종대','철수 중인 병력 종대','견인포 행군 종대','가교 자재 수송대','계곡로 침투 종대','마필 수송대','야간 차량 행렬','전차를 따르는 보병 종대']]];
+const TG=[];for(const[type,prot,hp,n,desc,names]of TGG)for(const nm of names)TG.push({k:nm,type,prot,hp,n,desc,name:['적 '+nm]});
+seg('#segMode','mode',()=>setMode(S.target&&S.target.adjLock?'ffe':S.mode));seg('#segFuze','fuze');
+const FZ={pd:'순발',vt:'근접',dly:'지연'},KRT={pd:{open:KR,trench:KR,hard:KR},vt:{open:KR,trench:KR,hard:KR},dly:{open:KR,trench:KR,hard:KR}},EFF={pd:{open:1,trench:.75,hard:.75},vt:{open:1,trench:1,hard:.5},dly:{open:.5,trench:.5,hard:1}};
+function warn(m){$('#fireMsg').textContent=m;if(m){snd('click');$('#ticker').textContent='포반장 ▸ '+m}}
+
+/* ---------- firing table ---------- */
+function tblNote(){const cc=clamp(val('#iCharge'),1,NC),lo=Math.ceil(RMAX[tblC-1]*Math.sin(2*E_MAX*MIL)/25)*25;$('#tblBand').textContent=`장약 ${tblC} · 사거리 ${lo.toLocaleString()}–${RMAX[tblC-1].toLocaleString()}m · 줄을 누르면 장약과 사각이 사격명령에 들어간다.`+(cc!==tblC?` 지금 사격명령은 장약 ${cc}이다.`:'');$('#tblBand').style.color=cc!==tblC?'var(--amber)':''}
+function renderTable(){$('#tblCh').innerHTML=RMAX.map((_,i)=>`<button class="btn${i+1===tblC?' on':''}" type="button" data-c="${i+1}">${i+1}</button>`).join('');
+  const lo=Math.ceil(RMAX[tblC-1]*Math.sin(2*E_MAX*MIL)/25)*25,hi=RMAX[tblC-1];
+  tblNote();let h='';
+  for(let R=lo;R<=hi;R+=25){const e=tblElev(tblC,R),q=pe(tblC,e);h+=`<tr data-e="${Math.round(e)}"><td>${R.toLocaleString()}</td><td>${Math.round(e)}</td><td>${tof(tblC,e).toFixed(1)}</td><td>${Math.round(q.r)}</td><td>${Math.round(q.d)}</td></tr>`}
+  $('#tbl tbody').innerHTML=h;$('#tblwrap').scrollTop=0}
+$('#tbl tbody').onclick=e=>{const tr=e.target.closest('tr');if(!tr)return;snd('click');$('#iCharge').value=tblC;$('#iElev').value=tr.dataset.e;$$('#tbl tr.sel').forEach(x=>x.classList.remove('sel'));tr.classList.add('sel');cmdInfo();$('#ticker').textContent=`사격명령에 입력 ▸ 장약 ${tblC}, 사각 ${tr.dataset.e}`};
+$('#tblCh').onclick=e=>{const b=e.target.closest('button');if(!b)return;snd('click');tblC=+b.dataset.c;renderTable()};
+
+/* ---------- map ---------- */
+const cv=$('#map'),cx=cv.getContext('2d'),view={cx:44000,cy:14000,z:1,w:300};
+const ppm=()=>view.w/MAP.size*view.z, sx=x=>view.w/2+(x-view.cx)*ppm(), sy=y=>view.w/2-(y-view.cy)*ppm();
+const wx=px=>view.cx+(px-view.w/2)/ppm(), wy=py=>view.cy-(py-view.w/2)/ppm();
+function resize(){const w=cv.clientWidth;if(!w)return;const dpr=Math.min(3,window.devicePixelRatio||1);view.w=w;cv.width=cv.height=Math.round(w*dpr);cx.setTransform(dpr,0,0,dpr,0,0)}
+function clampView(){view.z=clamp(view.z,1,9);const h=MAP.size/view.z/2;view.cx=clamp(view.cx,MAP.e0+h,MAP.e0+MAP.size-h);view.cy=clamp(view.cy,MAP.n0+h,MAP.n0+MAP.size-h)}
+function skull(c,x,y,s){c.save();c.translate(x,y);c.scale(s,s);c.fillStyle='#9b2a20';c.strokeStyle='#f3ead0';c.lineWidth=.14;
+  c.beginPath();c.arc(0,-.2,.82,0,7);c.rect(-.46,.3,.92,.62);c.stroke();c.fill();c.fillStyle='#f3ead0';
+  c.beginPath();c.arc(-.32,-.15,.22,0,7);c.arc(.32,-.15,.22,0,7);c.fill();c.beginPath();c.moveTo(0,.12);c.lineTo(-.11,.36);c.lineTo(.11,.36);c.fill();
+  c.fillRect(-.26,.56,.06,.36);c.fillRect(-.03,.56,.06,.36);c.fillRect(.2,.56,.06,.36);c.restore()}
+function anim(){if(!S.raf)S.raf=requestAnimationFrame(()=>{S.raf=0;draw()})}
+function mortarSym(c,X,Y,az,r){c.save();c.translate(X,Y);c.rotate(az*MIL);c.strokeStyle='#143c6e';c.fillStyle='#d8cdb0';c.lineWidth=Math.max(1.4,r*.28);c.lineCap='butt';
+  const L=r*5;c.beginPath();c.arc(0,0,r,0,7);c.fill();c.stroke();c.beginPath();c.moveTo(0,-r);c.lineTo(0,-r-L);
+  c.moveTo(-r*.75,-r-L+r*1.2);c.lineTo(0,-r-L);c.lineTo(r*.75,-r-L+r*1.2);
+  c.moveTo(-r*.55,-r-L*.3);c.lineTo(r*.55,-r-L*.3);c.moveTo(-r*.55,-r-L*.55);c.lineTo(r*.55,-r-L*.55);c.stroke();c.restore()}
+function draw(){if(S.station!=='board')return;clampView();const W=view.w,p=ppm(),c=cx;c.clearRect(0,0,W,W);
+  c.imageSmoothingQuality='high';c.drawImage(BASE,sx(MAP.e0),sy(MAP.n0+MAP.size),MAP.size*p,MAP.size*p);
+  if(p>.11){c.beginPath();for(let k=1;k<80;k++){if(k%10===0)continue;const X=sx(MAP.e0+k*100),Y=sy(MAP.n0+k*100);c.moveTo(X,0);c.lineTo(X,W);c.moveTo(0,Y);c.lineTo(W,Y)}
+    c.strokeStyle='rgba(42,40,34,.16)';c.lineWidth=.5;c.stroke()}
+  c.beginPath();for(let k=0;k<=8;k++){const X=sx(MAP.e0+k*1000),Y=sy(MAP.n0+k*1000);c.moveTo(X,0);c.lineTo(X,W);c.moveTo(0,Y);c.lineTo(W,Y)}
+  c.strokeStyle='rgba(42,40,34,.75)';c.lineWidth=1;c.stroke();
+  c.font='600 11px "IBM Plex Mono",monospace';c.textAlign='center';c.textBaseline='middle';
+  for(let k=0;k<=8;k++){const X=sx(MAP.e0+k*1000),Y=sy(MAP.n0+k*1000);
+    for(const[lx,ly,t]of[[X,9,40+k],[9,Y,10+k]]){if(lx<-10||ly<-10||lx>W+10||ly>W+10)continue;c.fillStyle='#d8cdb0';c.fillRect(lx-9,ly-7,18,14);c.fillStyle='#2a2822';c.fillText(t,lx,ly)}}
+  if(S.pin&&S.guns.length){c.setLineDash([5,4]);c.beginPath();c.moveTo(sx(base().x),sy(base().y));c.lineTo(sx(S.pin.x),sy(S.pin.y));c.strokeStyle='rgba(20,60,110,.8)';c.lineWidth=1.2;c.stroke();c.setLineDash([]);
+    const fa=azOf(base(),S.pin),fv=vec(fa),fu=vec(fa+1600),fd=dist(base(),S.pin);c.beginPath();c.fillStyle='#143c6e';
+    for(let k=1000;k<fd;k+=1000){const X=sx(base().x+fv[0]*k),Y=sy(base().y+fv[1]*k);c.moveTo(X-fu[0]*5,Y+fu[1]*5);c.lineTo(X+fu[0]*5,Y-fu[1]*5);if(p>.07)c.fillText(k/1000,X+fu[0]*13,Y-fu[1]*13)}c.stroke()}
+  if(S.guns.length){if(!S.symAz)S.symAz=[];const cur=S.guns.map((g,i)=>{const tgt=S.layDone?azFromDef(val(DF[i])):S.M;let a=S.symAz[i];if(a==null||reduce)a=tgt;const dz=((tgt-a+9600)%6400)-3200;if(Math.abs(dz)>2){a=norm(a+dz*.18+Math.sign(dz));anim()}else a=tgt;return S.symAz[i]=a});
+    const B=base(),mv=vec(S.M),bx=sx(B.x),by=sy(B.y);c.beginPath();c.moveTo(bx,by);c.lineTo(bx+mv[0]*700*p,by-mv[1]*700*p);c.strokeStyle='rgba(42,40,34,.35)';c.lineWidth=1;c.setLineDash([2,4]);c.stroke();c.setLineDash([]);
+    if(p>.22)S.guns.forEach((g,i)=>{const X=sx(g.x),Y=sy(g.y),a=cur[i]+g.err,v=vec(a);mortarSym(c,X,Y,a,4.5);c.fillStyle=i===1?'#9b2a20':'#143c6e';c.fillText(i+1,X-v[0]*13,Y+v[1]*13)});
+    else mortarSym(c,(sx(S.guns[0].x)+sx(S.guns[3].x))/2,(sy(S.guns[0].y)+sy(S.guns[3].y))/2,cur[1],5.5)}
+  for(const m of S.marks){const X=sx(m.x),Y=sy(m.y),r=Math.max(3.5,(m.air?7:10)*p);const gr=c.createRadialGradient(X,Y,0,X,Y,r*2.2);
+    gr.addColorStop(0,m.air?'rgba(40,38,34,.35)':'rgba(18,14,10,.92)');gr.addColorStop(.38,m.air?'rgba(60,56,50,.22)':m.dly?'rgba(70,48,28,.7)':'rgba(40,32,24,.6)');gr.addColorStop(1,'rgba(60,45,30,0)');
+    c.fillStyle=gr;c.beginPath();c.arc(X,Y,r*2.2,0,7);c.fill();if(!m.air){c.strokeStyle='rgba(20,15,10,.55)';c.lineWidth=.8;c.beginPath();for(let q=0;q<10;q++){const a=q*.628+m.x%1,rr=r*(1.3+((q*37+Math.round(m.y))%5)/6);c.moveTo(X+Math.cos(a)*r*.8,Y+Math.sin(a)*r*.8);c.lineTo(X+Math.cos(a)*rr,Y+Math.sin(a)*rr)}c.stroke()}
+    if(p>.15){c.fillStyle='#1c1a16';c.fillText(m.gun+1,X+r*1.6+5,Y-r*1.2)}}
+  if(S.target&&(S.reveal||S.target.els.some(e=>e.dead)))for(const e of S.target.els){const X=sx(e.x),Y=sy(e.y);
+    if(e.dead){const k=e.deadT?clamp((performance.now()-e.deadT)/320,0,1):1;if(k<=0)continue;const ez=1-Math.pow(1-k,3);c.save();c.globalAlpha=ez;c.translate(X,Y);c.rotate((1-ez)*-.35);skull(c,0,0,clamp(7*Math.sqrt(view.z),8,16)*(1+(1-ez)*1.4));c.restore();if(k<1)anim()}else if(S.reveal){c.strokeStyle='#9b2a20';c.lineWidth=2;c.strokeRect(X-5,Y-5,10,10)}}
+  if(S.pin&&S.guns.length&&S.sheaf!=='par'&&S.sheaf!=='conv'&&S.phase==='plan')S.guns.forEach((g,i)=>{const q=aimPt(i),X=sx(q.x),Y=sy(q.y);c.strokeStyle=c.fillStyle='#143c6e';c.lineWidth=1.5;c.beginPath();c.moveTo(X-5,Y);c.lineTo(X+5,Y);c.moveTo(X,Y-5);c.lineTo(X,Y+5);c.stroke();if(p>.1)c.fillText(i+1,X+9,Y-8)});
+  if(S.target&&S.target.op&&S.phase!=='lay'){const o=S.target.op,X=sx(o.x),Y=sy(o.y);
+    if($('#cOT').value.trim()!==''){const v=vec(norm(val('#cOT')));c.beginPath();c.moveTo(X,Y);c.lineTo(X+v[0]*2600*p,Y-v[1]*2600*p);c.strokeStyle='rgba(30,95,60,.7)';c.lineWidth=1.1;c.setLineDash([7,3,2,3]);c.stroke();c.setLineDash([])}
+    c.beginPath();c.moveTo(X,Y-7);c.lineTo(X+6.5,Y+5);c.lineTo(X-6.5,Y+5);c.closePath();c.fillStyle='#d8cdb0';c.fill();c.strokeStyle='#1e5f3c';c.lineWidth=1.8;c.stroke();c.fillStyle='#1e5f3c';c.fillRect(X-1,Y-1,2,2);c.fillText('OP',X,Y+15)}
+  if(S.pin){const X=sx(S.pin.x),Y=sy(S.pin.y);c.strokeStyle='#9b2a20';c.lineWidth=1.6;c.beginPath();c.arc(X,Y,9,0,7);c.moveTo(X-15,Y);c.lineTo(X-4,Y);c.moveTo(X+4,Y);c.lineTo(X+15,Y);
+    c.moveTo(X,Y-15);c.lineTo(X,Y-4);c.moveTo(X,Y+4);c.lineTo(X,Y+15);c.stroke()}
+  const now=performance.now();
+  const sp=(s,t)=>{const x=s.from.x+(s.to.x-s.from.x)*t,y=s.from.y+(s.to.y-s.from.y)*t;return[sx(x),sy(y),Math.sin(t*Math.PI)*30]};
+  for(const s of S.shots){if(now<s.t0||s.done)continue;const t=clamp((now-s.t0)/s.dur,0,1),[X,Y,L]=sp(s,t);
+    c.fillStyle='rgba(0,0,0,.22)';c.beginPath();c.ellipse(X,Y,3,1.8,0,0,7);c.fill();
+    for(let k=1;k<=10;k++){const u=Math.max(0,t-k*.012),[a,b,l]=sp(s,u);c.fillStyle=`rgba(255,${190-k*8},${110-k*8},${.5*(1-k/10)})`;c.beginPath();c.arc(a,b-l,2.6*(1-k/12),0,7);c.fill()}
+    const g=c.createRadialGradient(X,Y-L,0,X,Y-L,7);g.addColorStop(0,'rgba(255,245,210,1)');g.addColorStop(.35,'rgba(255,170,70,.8)');g.addColorStop(1,'rgba(255,120,40,0)');c.fillStyle=g;c.beginPath();c.arc(X,Y-L,7,0,7);c.fill()}
+  S.fx=(S.fx||[]).filter(f=>now-f.t<f.life);for(const f of S.fx){const t=(now-f.t)/f.life;if(t<0)continue;const X=sx(f.x),Y=sy(f.y);
+    if(f.k==='smoke'){const R=Math.max(8+Math.sqrt(t)*30,(f.r0+(f.r1-f.r0)*Math.sqrt(t))*p*1.2),q=Math.max(p,.35),ox=f.dx*t*30*q,oy=-f.dy*t*30*q,g=c.createRadialGradient(X+ox,Y+oy,0,X+ox,Y+oy,R);
+      g.addColorStop(0,`rgba(${f.c},${.42*Math.pow(1-t,1.6)})`);g.addColorStop(1,`rgba(${f.c},0)`);c.fillStyle=g;c.beginPath();c.arc(X+ox,Y+oy,R,0,7);c.fill()}
+    else if(f.k==='flash'){const R=Math.max(26,f.r*p*1.5)*(.6+t*.8),g=c.createRadialGradient(X,Y,0,X,Y,R);g.addColorStop(0,`rgba(255,250,225,${1-t})`);g.addColorStop(.3,`rgba(255,190,80,${.9*(1-t)})`);g.addColorStop(1,'rgba(255,90,20,0)');c.fillStyle=g;c.beginPath();c.arc(X,Y,R,0,7);c.fill()}
+    else if(f.k==='ring'){const R=Math.max(44,f.r*p*1.4)*(.15+Math.sqrt(t));c.strokeStyle=`rgba(255,235,200,${.7*(1-t)})`;c.lineWidth=2.5*(1-t)+.5;c.beginPath();c.arc(X,Y,R,0,7);c.stroke()}
+    else if(f.k==='debris'){const d=(1-Math.pow(1-t,2)),q=Math.max(p*1.3,.45),x=X+f.vx*d*q,y=Y-f.vy*d*q;c.fillStyle=`rgba(30,22,14,${1-t})`;c.fillRect(x-1,y-1,2,2)}
+    else if(f.k==='muzzle'){if(t<.15){const R=10+t*60,g=c.createRadialGradient(X,Y,0,X,Y,R);g.addColorStop(0,`rgba(255,240,200,${1-t/.15})`);g.addColorStop(1,'rgba(255,150,50,0)');c.fillStyle=g;c.beginPath();c.arc(X,Y,R,0,7);c.fill()}
+      const R=6+t*22,g=c.createRadialGradient(X+t*8,Y-t*10,0,X+t*8,Y-t*10,R);g.addColorStop(0,`rgba(200,196,186,${.6*(1-t)})`);g.addColorStop(1,'rgba(200,196,186,0)');c.fillStyle=g;c.beginPath();c.arc(X+t*8,Y-t*10,R,0,7);c.fill()}}
+  if(S.fx.length)anim();
+  S.pings=S.pings.filter(q=>now-q.t<450);for(const q of S.pings){const t=(now-q.t)/450;c.beginPath();c.arc(sx(q.x),sy(q.y),9+t*22,0,7);c.strokeStyle=`rgba(155,42,32,${1-t})`;c.lineWidth=2;c.stroke()}if(S.pings.length)anim();
+  const vg=c.createRadialGradient(W/2,W/2,W*.35,W/2,W/2,W*.75);vg.addColorStop(0,'rgba(40,28,12,0)');vg.addColorStop(1,'rgba(40,28,12,.32)');c.fillStyle=vg;c.fillRect(0,0,W,W);
+  if(PAPER){c.save();c.globalAlpha=.5;c.globalCompositeOperation='multiply';c.fillStyle=PAPER;c.fillRect(0,0,W,W);c.restore()}}
+new ResizeObserver(()=>{resize();draw()}).observe(cv);
+
+const pts=new Map();let gest=null;
+cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId);pts.set(e.pointerId,{x:e.offsetX,y:e.offsetY});
+  const a=[...pts.values()];gest={moved:0,t:performance.now(),multi:a.length>1,d0:a.length>1?Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y):0,z0:view.z}});
+cv.addEventListener('pointermove',e=>{const p=pts.get(e.pointerId);if(!p||!gest)return;const dx=e.offsetX-p.x,dy=e.offsetY-p.y;p.x=e.offsetX;p.y=e.offsetY;const a=[...pts.values()];
+  if(a.length>1){gest.multi=true;if(!gest.d0){gest.d0=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);gest.z0=view.z}view.z=gest.z0*Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y)/gest.d0}
+  else{gest.moved+=Math.abs(dx)+Math.abs(dy);if(gest.moved>8){view.cx-=dx/ppm();view.cy+=dy/ppm()}}draw()});
+const up=e=>{const p=pts.get(e.pointerId);pts.delete(e.pointerId);if(!p||!gest)return;
+  if(e.type==='pointerup'&&!gest.multi&&gest.moved<=8&&performance.now()-gest.t<600&&S.phase==='plan'){S.pin={x:Math.round(wx(p.x)),y:Math.round(wy(p.y))};S.pings.push({x:S.pin.x,y:S.pin.y,t:performance.now()});snd('click');updateReads();draw()}
+  if(!pts.size)gest=null};
+cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
+cv.addEventListener('wheel',e=>{e.preventDefault();view.z*=e.deltaY<0?1.2:1/1.2;draw()},{passive:false});
+$('#zIn').onclick=()=>{view.z*=1.6;draw()};$('#zOut').onclick=()=>{view.z/=1.6;draw()};
+$('#zGun').onclick=()=>{view.cx=base().x;view.cy=base().y;draw()};
+$('#zPin').onclick=()=>{if(S.pin){view.cx=S.pin.x;view.cy=S.pin.y;if(view.z<4)view.z=4;draw()}};
+$$('[data-n]').forEach(b=>b.onclick=()=>{if(!S.pin||S.phase!=='plan')return;snd('click');const[dx,dy]=b.dataset.n.split(',').map(Number);
+  S.pin.x=Math.round(S.pin.x/S.step)*S.step+dx*S.step;S.pin.y=Math.round(S.pin.y/S.step)*S.step+dy*S.step;updateReads();draw()});
+$$('[data-step]').forEach(b=>b.onclick=()=>{S.step=+b.dataset.step;$$('[data-step]').forEach(x=>x.classList.toggle('on',x===b))});
+$('#azSend').onclick=()=>{if(!S.pin)return;snd('click');const i=S.rg,q=i===1?S.pin:aimPt(i);if(i!==1)S.dman[i]=true;$(DF[i]).value=pad(defOf(azOf(S.guns[i],q)),4);cmdInfo();draw();$('#ticker').textContent=`사격명령에 입력 ▸ ${i+1}번포 편각 ${$(DF[i]).value}`};
+$('#cApply').onclick=()=>{if(!S.pin||S.phase!=='plan')return;snd('click');if($('#cOT').value.trim()===''){$('#ticker').textContent='관측소가 부른 OTAZ를 먼저 넣어라.';return}const az=norm(val('#cOT')),g=vec(az),u=vec(az+1600),l=+$('#cLR').value*Math.abs(val('#cLRv')),r=+$('#cAD').value*Math.abs(val('#cADv'));
+  S.pin={x:Math.round(S.pin.x+u[0]*l+g[0]*r),y:Math.round(S.pin.y+u[1]*l+g[1]*r)};$('#cLRv').value=0;$('#cADv').value=0;updateReads();draw()};
+function updateReads(){updateReads0();cmdInfo()}
+function updateReads0(){$('#rGunAlt').textContent=S.guns.length?Math.round(gunAlt())+' m':'---';
+  if(!S.pin){$('#rGrid').textContent='도판을 눌러 표정';$('#rAz').textContent='----';$('#rDef').textContent='----';$('#rRng').textContent='----';$('#rAlt').textContent='---';return}
+  $('#rGrid').textContent=grid(S.pin,8);const ri=S.rg,rgn=S.guns[ri],rq=ri===1?S.pin:aimPt(ri),raz=azOf(rgn,rq);$('#rAzL').textContent=`방위각 (${ri+1}번포→${ri===1?'핀':'조준점'})`;$('#rDefL').textContent=`편각 (${ri+1}번포)`;$('#azSend').textContent=`${ri+1}번포 편각을 사격명령에 입력`;
+  $('#rAz').textContent=pad(raz,4)+' 밀';$('#rDef').textContent=pad(defOf(raz),4)+' 밀';$('#rRng').textContent=Math.round(dist(rgn,rq)).toLocaleString()+' m';
+  $('#rAlt').textContent=Math.round(alt(S.pin.x,S.pin.y))+' m'}
+
+/* ---------- fire ---------- */
+function fire(){if(!S.layDone)return warn('먼저 네 문을 방열하고 포위치를 보고하라.');if(S.phase==='flight'||S.phase==='wait')return warn('탄이 날아가는 중이다.');if(S.phase!=='plan')return warn('무전에서 다음 임무를 받아라.');const T=S.target,c=clamp(val('#iCharge'),1,NC),E=val('#iElev'),A=norm(val('#iAz')),ffe=S.mode==='ffe';
+  if(!S.pin)return warn('표적이 도판에 없다. 도판을 눌러 먼저 표정하라.');
+  if(E<E_MIN||E>E_MAX)return warn(`사각 ${E}밀은 쏠 수 없다. ${E_MIN}–${E_MAX}밀로 다시 내려라.`);
+  if(ffe&&S.sheaf==='spec'&&$('#iAtt').value.trim()==='')return warn('특수사향속은 관측소가 부른 표적 자세를 넣어야 한다.');if(!ffe&&T.adjLock)return warn('조정 사격은 끝났다. 효력사만 쏠 수 있다.');if(ffe&&!T.adjLock)return warn('조정 사격이 끝나고 관측소가 효력사를 불러야 쏠 수 있다.');
+  let sel=ffe?[0,1,2,3].filter(i=>S.fg[i]):[1];let nr=ffe?clamp(val('#iRounds'),1,13):1;if(!sel.length)return warn('사격할 포를 하나 이상 지명하라.');
+  if(ffe){const q=T.req,ok=(q.m==='named'?(sel.length===1&&sel[0]===1):(sel.length===4&&S.meth===q.m))&&sel.length*nr===q.n;if(!ok)return warn('관측소가 통제한 효력사와 다르다. 무전에서 방법과 소대 발수를 확인하라.')}
+  if(ffe)for(const i of sel)if(S.guns[i].ammo<nr)return warn(`${i+1}번포 잔탄이 ${S.guns[i].ammo}발뿐이다.`);
+  if(ffe&&S.fuze==='vt'&&S.vt<sel.length*nr)return warn(`근접신관이 ${S.vt}발뿐이다. 다른 신관을 골라라.`);warn('');
+  const Rt=tblRange(c,E),PE=pe(c,E),bR=dist(base(),S.pin),fast=window.__fdc.fast,now=performance.now(),dur=fast?20:clamp(tof(c,E)*1000/6,2500,6000),meth=!ffe?'salvo':T.req.m==='named'?'named':S.meth;S.shots=[];
+  if(meth==='left')sel=sel.slice().reverse();
+  sel.forEach((i,pos)=>{const g=S.guns[i],aC=ffe?aimC(i):null,dR=ffe?dist(g,aC)-bR:0,sh=ffe?((azOf(g,aC)-azOf(g,aimPt(i))+9600)%6400)-3200:0,Ai=azFromDef(norm(val(ffe?DF[i]:'#iAz')))+sh,d=vec(Ai+g.err),R=Rt+dR,ga=alt(g.x,g.y),r=vec(Ai+g.err+1600);
+    let L0=R;for(let n=0;n<5;n++)L0=R-(alt(g.x+d[0]*L0,g.y+d[1]*L0)-ga)/2;
+    for(let k=0;k<nr;k++){const L=L0+gauss()*PE.r/.6745,w=gauss()*PE.d/.6745,gap=meth==='salvo'?(k*1100+pos*70)/(fast?50:1):meth==='cont'||meth==='named'?k*dur*.55+pos*dur*.05:((k*sel.length+pos)*2500+rnd(-450,450)*((k*sel.length+pos)?1:0))/(fast?100:1);
+      S.shots.push({gun:i,from:{x:g.x,y:g.y},to:{x:g.x+d[0]*L+r[0]*w,y:g.y+d[1]*L+r[1]*w},t0:now+gap,dur,done:false})}
+    if(ffe)g.ammo-=nr});
+  const cnt=sel.length*nr;if(ffe){S.used+=cnt;if(S.fuze==='vt')S.vt-=cnt}
+  if(ffe){T.ffe++;S.ffeUsed+=cnt;}else T.adjUsed++;
+  S.flashT=now;S.phase='flight';S.flight={ffe,tof:tof(c,E),fuze:S.fuze,sel,meth,kr:KRT[S.fuze][T.prot],eff:EFF[S.fuze][T.prot]};
+  say('화력지휘소',`${ffe?'효력사':'조정 사격'}. 장약 ${c}, 사각 ${E}, 편각 ${ffe?sel.slice().sort().map(i=>pad(norm(val(DF[i])),4)).join('/'):pad(A,4)}, 신관 ${FZ[S.fuze]}${ffe?', '+{par:'평행',conv:'집중',open:'개방',spec:'특수'}[S.sheaf]+'사향속, '+(meth==='named'?'지명사 2번포 '+nr+'발':MN[meth]+' 포당 '+nr+'발, 총 '+sel.length*nr+'발'):''}. 쏴.`,true);
+  if(ffe)say('포진',meth==='named'?`지명사 수신. 2번포 ${nr}발 발사.`:meth==='cont'?`연속사 포당 ${nr}발 수신. 발사.`:`익차사 포당 ${nr}발 수신. 1번포부터 발사.`);
+  S.fx=S.fx||[];buzz(25);updateHud();paintGuns();go('board');
+  const all=S.shots.map(s=>s.to),mx=all.reduce((s,q)=>s+q.x,0)/all.length,my=all.reduce((s,q)=>s+q.y,0)/all.length;
+  if(Math.abs(sx(mx)-view.w/2)>view.w*.42||Math.abs(sy(my)-view.w/2)>view.w*.42){view.cx=mx;view.cy=my}
+  requestAnimationFrame(loop)}
+function onImpact(s,now){const F=S.flight,T=S.target;if(!F.ffe)return;for(const e of T.els)if(!e.dead&&dist(s.to,e)<=F.kr&&(e.hp-=F.eff)<=1e-6){e.dead=true;e.deadT=now+120;snd('stamp',.12)}
+  const fr=T.els.filter(e=>e.dead).length/T.els.length;if((T.els.length===1?fr===1:fr>=.8)&&!F.stop&&F.meth!=='salvo'){F.stop=true;let n=0;
+    for(const q of S.shots)if(!q.done&&now<q.t0){q.done=q.cancel=true;n++;S.guns[q.gun].ammo++;S.used--;S.ffeUsed--;if(F.fuze==='vt')S.vt++}
+    if(n){F.cancelN=n;say('관측소','표적 파괴. 사격 중지. 이상.');say('화력지휘소','사격 중지.',true);say('포진',`사격 중지. ${n}발 미발사.`);updateHud()}}}
+function fx(o){S.fx.push(o)}
+function blast(s,now){const fz=S.flight.fuze,air=fz==='vt',dly=fz==='dly',x=s.to.x,y=s.to.y,hz=air?14:0;
+  S.marks.push({x,y,gun:s.gun,air,dly,t:now});fx({k:'flash',x,y:y+hz,t:now,life:air?260:200,r:air?46:34});fx({k:'ring',x,y,t:now,life:700,r:air?80:64});
+  for(let i=0;i<(reduce?2:6);i++)fx({k:'smoke',x:x+gauss()*6,y:y+hz+gauss()*6,t:now+i*60,life:2600+Math.random()*1800,r0:6,r1:26+Math.random()*22,dx:2+Math.random()*3,dy:1+Math.random()*2,c:dly?'92,70,48':air?'95,95,92':'72,66,58'});
+  if(!air)for(let i=0;i<(reduce?4:14);i++){const a=Math.random()*6.283,v=25+Math.random()*55;fx({k:'debris',x,y,t:now,life:500+Math.random()*500,vx:Math.cos(a)*v,vy:Math.sin(a)*v})}
+  const far=Math.min(1,dist(base(),s.to)/340/9);snd(air?'air':'boom',reduce?0:far);buzz([60,30,40]);
+  if(!reduce){const w=$('#mapwrap');w.classList.remove('shake','flash');void w.offsetWidth;w.classList.add('shake','flash')}}
+function loop(){const now=performance.now();let live=false;
+  for(const s of S.shots){if(s.done)continue;live=true;if(!s.launched&&now>=s.t0){s.launched=true;fx({k:'muzzle',x:s.from.x,y:s.from.y,t:now,life:1400});snd('fire');}
+    if(now>=s.t0+s.dur){s.done=true;onImpact(s,now);blast(s,now);S.bursts.push({x:s.to.x,y:s.to.y,t:now})}}
+  const f=S.shots[0],left=f?Math.max(0,1-(now-f.t0)/f.dur)*S.flight.tof:0;$('#eta').hidden=!live;if(live)$('#eta').textContent=`탄착까지 ${Math.ceil(left)}초`;
+  S.bursts=S.bursts.filter(b=>now-b.t<700);draw();
+  if(live||S.bursts.length)requestAnimationFrame(loop);else if(S.phase==='flight'){S.phase='wait';setTimeout(resolve,reduce?0:500)}}
+function setMode(v){S.mode=v;$('#ffeBox').hidden=v!=='ffe';$$('#segMode button').forEach(x=>x.classList.toggle('on',x.dataset.v===v))}
+function adjUi(){const T=S.target,n=T?T.adjUsed:0,lock=!!(T&&T.adjLock);$('#adjN').textContent=`${n}/3`;$('#segMode [data-v="adj"]').disabled=lock;$('#segMode [data-v="ffe"]').disabled=!lock;if(lock)setMode('ffe')}
+function resolve(){const T=S.target,hits=S.shots.filter(s=>!s.cancel).map(s=>s.to),fz=S.flight.fuze,kr=KRT[fz][T.prot];
+  const gAz=T.otAz,g=vec(gAz),u=vec(gAz+1600),mx=hits.reduce((s,q)=>s+q.x,0)/hits.length-T.c.x,my=hits.reduce((s,q)=>s+q.y,0)/hits.length-T.c.y;
+  const k=T.rookie?20:10,nz=fz==='vt'?25:0,lat=Math.round((mx*u[0]+my*u[1]+gauss()*nz)/k)*k,rng=Math.round((mx*g[0]+my*g[1]+gauss()*nz)/k)*k;
+  const corr=[lat?`${lat>0?'좌로':'우로'} ${Math.abs(lat)}`:'',rng?`${rng>0?'줄이기':'더하기'} ${Math.abs(rng)}`:''].filter(Boolean).join(', ')||'탄착 양호';
+  if(!S.flight.ffe){const hit=dist(hits[0],T.c)<=KR,rq=`효력사 ${MN[T.req.m]}, ${T.req.m==='named'?'':'소대 '}${T.req.n}발`;S.phase='plan';
+    if(hit){T.adjLock=true;T.adjHit=true;say('관측소',`명중. ${rq}. 이상.`)}
+    else if(T.adjUsed>=3){T.adjLock=true;say('관측소',`${corr}. 조정 사격 끝. 수정 후 ${rq}. 이상.`)}
+    else say('관측소',`${corr}. 조정 사격 ${T.adjUsed}/3. 이상.`);
+    adjUi();paintGuns();draw();return}
+  const sel=S.flight.sel.filter(i=>S.shots.some(q=>q.gun===i&&!q.cancel)),gm=sel.map(i=>{const hs=S.shots.filter(q=>q.gun===i&&!q.cancel).map(q=>q.to);return{i,x:hs.reduce((a,q)=>a+q.x,0)/hs.length,y:hs.reduce((a,q)=>a+q.y,0)/hs.length}});
+  const frac=T.els.filter(e=>e.dead).length/T.els.length,near=hits.some(h=>dist(h,T.c)<80);
+  T.grade=T.els.length===1?(frac===1?'파괴':near?'제압':'무효'):frac>=.8?'파괴':frac>=.5?'제압':'무효';
+  const stray=gm.filter(q=>dist(q,T.c)>200).length;T.stray=Math.max(T.stray||0,stray);T.onT=gm.filter(q=>T.els.some(e=>dist(q,e)<=50)).length;T.fz=fz;T.kr=kr;T.eff=S.flight.eff;
+  if(T.grade==='무효'&&T.onT>=Math.ceil(sel.length*.75))T.grade='제압';if(T.stray>=2)T.grade='무효';
+  const per=S.flight.meth==='right'||S.flight.meth==='left'?' '+gm.slice().sort((a,b)=>a.i-b.i).map(q=>{const dx=q.x-T.c.x,dy=q.y-T.c.y,l=Math.round((dx*u[0]+dy*u[1])/10)*10,rg=Math.round((dx*g[0]+dy*g[1])/10)*10;return `${q.i+1}번포 ${[l?(l>0?'우 ':'좌 ')+Math.abs(l):'',rg?(rg>0?'원 ':'근 ')+Math.abs(rg):''].filter(Boolean).join(' ')||'양호'}`}).join(', ')+'.':'';
+  draw();const left=S.guns.reduce((a,q)=>a+q.ammo,0);
+  if(T.grade==='파괴'||T.ffe>=3||left<1){S.reveal=true;draw();say('관측소',(stray?`이탈 ${stray}문. `:'')+(T.grade==='파괴'?'표적 파괴. 사격 끝. 이상.':`효과 ${T.grade}. 사격 끝. 이상.`));return endMission()}
+  S.phase='plan';$('#endBtn').hidden=false;paintGuns();updateHud();
+  say('관측소',(stray?`이탈 ${stray}문. `:'')+`효과 ${T.grade}. 효력사를 반복하거나 사격 끝을 보고하라. 이상.`)}
+$('#endBtn').onclick=()=>{const T=S.target;if(S.phase!=='plan'||!T||!T.ffe)return;snd('click');S.reveal=true;say('화력지휘소','사격 끝.',true);endMission()};
+function campOver(){return Math.min(...S.guns.map(q=>q.ammo))<4}
+function endMission(){S.phase='result';S.tEnd=performance.now();$('#endBtn').hidden=true;const T=S.target,sec=Math.round((S.tEnd-S.t0)/1000);
+  const b=T.grade==='파괴'?1000:T.grade==='제압'?300:0,stray=T.stray||0,ps=200*stray,verdict=T.grade==='파괴'&&!stray?'합격':T.grade==='무효'?'불합격':'미흡',pa=10*Math.max(0,S.ffeUsed-T.par),pt=Math.min(300,sec),first=0,hitB=T.adjHit?100:0,comp=0,sc=T.grade==='무효'?0:Math.max(0,b-pa-pt-ps+first+hitB+comp);
+  S.total+=sc;if(verdict==='합격')S.pass++;updateHud();paintGuns();draw();
+  const lay=S.guns.map((g,i)=>g.err?`${i+1}번포 ${g.err>0?'+':''}${g.err}밀`:'').filter(Boolean).join(', ')||'없음';
+  const nk=T.els.filter(e=>e.dead).length,pn={open:'노출 표적',trench:'참호·포상 속 표적',hard:'유개 엄폐호'}[T.prot];let why=`표적 ${T.els.length}곳 중 ${nk}곳을 잡았다. `;
+  if(T.grade!=='파괴'&&T.fz&&T.eff<1)why+=`${FZ[T.fz]}신관은 ${pn}에 효과가 ${Math.round((1-T.eff)*100)}% 줄어든다. 같은 발수로는 모자랐다. `;
+  if(T.grade!=='파괴'&&T.eff===1&&T.hp>1)why+=`이 표적은 한 곳에 ${T.hp}발이 들어가야 잡힌다. 발수가 모자랐다. `;
+  else if(T.grade!=='파괴'&&T.onT>=3&&T.els.length>1)why+='탄착이 표적 전체를 덮지 못했다. 사향속을 넓혀야 한다. ';
+  const best={point:'집중',cluster:'집중',area:'평행',line:'개방',oblique:'특수'}[T.type]+', 신관은 '+{open:'순발이나 근접',trench:'근접',hard:'지연'}[T.prot],over=campOver();
+  $('#resCard').innerHTML=`<div class="stamp">${T.grade==='파괴'?'<svg viewBox="-1.2 -1.2 2.4 2.4" aria-hidden="true"><g fill="currentColor"><circle cy="-.2" r=".82"/><rect x="-.46" y=".3" width=".92" height=".62"/></g><g fill="#d8cdb0"><circle cx="-.32" cy="-.15" r=".22"/><circle cx=".32" cy="-.15" r=".22"/><path d="M0 .12-.11.36h.22z"/><path d="M-.26.56h.06v.4h-.06zM-.03.56h.06v.4h-.06zM.2.56h.06v.4H.2z"/></g></svg>':''}
+    <div><div class="label" style="color:#5c5648">임무 ${S.mission} · ${T.name}</div><h2>${verdict} · ${T.grade}</h2></div></div>
+    <dl><dt>기본 점수</dt><dd>${b}</dd><dt>효력사 ${S.ffeUsed}발 (기준 ${T.par}발)</dt><dd>−${pa}</dd><dt>소요 시간 ${sec}초</dt><dd>−${pt}</dd><dt>이탈 ${stray}문</dt><dd>−${ps}</dd><dt>조정 사격 명중</dt><dd>+${hitB}</dd>
+    <dt style="border-top:2px solid #2a2822;padding-top:4px">임무 점수</dt><dd style="border-top:2px solid #2a2822;padding-top:4px">${sc}</dd></dl>
+    <small>${why}${stray?`표적에서 200m 넘게 벗어난 포가 ${stray}문이다. 날개포 편각을 확인하라. 2문 이상이면 불합격이다. `:''}남은 방열 오차: ${lay}. 이 표적에 맞는 사향속은 ${best}이다.${T.rookie?' 신병 관측병의 좌표는 100m 단위였다.':''}</small>
+    <div class="row"><button class="btn" type="button" id="resMap" style="flex:1">도판 확인</button><button class="btn go" type="button" id="resNext" style="flex:1.4">${over?'탄약 소진 · 결산':S.mission%3===0?'진지 변환':'다음 임무'}</button></div>`;
+  setTimeout(()=>{$('#ovResult').hidden=false;$('#resNext').focus()},reduce?0:1400);
+  $('#resMap').onclick=()=>{$('#ovResult').hidden=true;go('board');$('#radioHint').textContent='도판을 확인했으면 무전에서 다음 임무를 받아라.';$('#ticker').textContent='다음 임무를 받으려면 여기를 눌러라';$('#ticker').onclick=next};
+  $('#resNext').onclick=next}
+function next(){$('#ticker').onclick=null;if(S.phase!=='result')return;
+  if(campOver()&&!S.final){S.final=true;$('#resCard').innerHTML=`<div class="stamp" style="color:var(--ink)"><div><div class="label" style="color:#5c5648">탄약 소진</div><h2>작전 결산</h2></div></div>
+    <dl><dt>수행 임무</dt><dd>${S.mission}</dd><dt>합격</dt><dd>${S.pass}</dd><dt>남은 탄</dt><dd>${S.guns.map(g=>g.ammo).join(' / ')}</dd><dt style="border-top:2px solid #2a2822;padding-top:4px">총점</dt><dd style="border-top:2px solid #2a2822;padding-top:4px">${S.total}</dd></dl>
+    <button class="btn go" type="button" id="resNext">새 작전 시작</button>`;$('#ovResult').hidden=false;$('#resNext').onclick=next;return}
+  $('#ovResult').hidden=true;go('radio');
+  if(S.final){S.final=false;S.mission=0;S.total=0;S.pass=0;S.vt=80;S.guns=[];$('#log').innerHTML='';occupy()}else if(S.mission%3===0)occupy();else newMission()}
+
+/* ---------- lever ---------- */
+(function(){const k=$('#knob'),tr=$('#lever');let drag=null;const max=()=>Math.max(1,tr.clientWidth-k.offsetWidth-6);
+  const back=()=>{k.style.transition='transform .18s';k.style.transform='';setTimeout(()=>k.style.transition='',200)};
+  const finish=force=>{if(!drag)return;const m=drag.m;drag=null;back();if(force||m>=max()*.55)fire();else if(m<8)warn('레버를 오른쪽 끝까지 밀어야 격발된다.')};
+  tr.addEventListener('pointerdown',e=>{e.preventDefault();drag={x:e.clientX,m:0};try{tr.setPointerCapture(e.pointerId)}catch(_){}});
+  tr.addEventListener('pointermove',e=>{if(!drag)return;const pm=drag.m;drag.m=clamp(e.clientX-drag.x,0,max());if(Math.floor(drag.m/14)!==Math.floor(pm/14)){snd('ratchet');buzz(4)}k.style.transform=`translateX(${drag.m}px)`;if(drag.m>=max()*.92)finish(true)});
+  tr.addEventListener('pointerup',()=>finish(false));tr.addEventListener('pointercancel',()=>{drag=null;back()});
+  k.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();fire()}})})();
+
+/* ---------- hud ---------- */
+function updateHud(){$('#sMis').textContent=Math.max(1,S.mission);$('#sAmmo').textContent=S.guns.reduce((a,q)=>a+q.ammo,0);$('#vtLeft').textContent=S.vt;$('#ammoLine').textContent='잔탄 '+S.guns.map((q,i)=>`${i+1}번 ${q.ammo}`).join(' · ')+` · 근접신관 ${S.vt}`;$('#sScore').textContent=S.total}
+setInterval(()=>{if(!S.t0||S.phase==='lay'){$('#sTime').textContent='0:00';return}const s=Math.round(((S.tEnd||performance.now())-S.t0)/1000);$('#sTime').textContent=`${s/60|0}:${pad(s%60,2)}`},500);
+$('#btnBgm').onclick=()=>{BGM.on=!BGM.on;if(BGM.on)bgmStart();else bgmStop();$('#btnBgm').setAttribute('aria-pressed',BGM.on)};
+$('#btnMute').onclick=()=>{AU.muted=!AU.muted;if(AU.c)AU.out.gain.setTargetAtTime(AU.muted?0:.9,AU.c.currentTime,.05);$('#btnMute').setAttribute('aria-pressed',!AU.muted)};
+$('#btnManual').onclick=()=>{$('#ovManual').hidden=false;$('#manClose').focus()};$('#manClose').onclick=()=>$('#ovManual').hidden=true;
+
+renderTable();cmdInfo();occupy();
+window.__fdc={fast:false,TG,next,S,tblRange,tblElev,tof,alt,grid,azOf,dist,fire,base};
+})();
+</script>
+</body>
+</html>
